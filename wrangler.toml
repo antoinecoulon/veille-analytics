@@ -1,3 +1,8 @@
 name = "veille-analytics"
 main = "src/index.ts"
 compatibility_date = "2026-03-28"
+
+[[d1_databases]]
+binding = "veille_analytics"
+database_name = "veille-analytics"
+database_id = "a3b24c2c-0dfa-4ec5-beec-7282eb04b184"
