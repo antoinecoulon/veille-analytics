@@ -1,0 +1,16 @@
+{
+  "name": "veille-analytics",
+  "version": "0.1.0",
+  "description": "Plateforme analytics et veille technologique",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.28.2",
+  "devDependencies": {
+    "wrangler": "^4.78.0"
+  }
+}
