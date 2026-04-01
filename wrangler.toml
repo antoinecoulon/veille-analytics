@@ -3,6 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2026-03-28"
 
 [[d1_databases]]
-binding = "veille_analytics"
+binding = "DB"
 database_name = "veille-analytics"
 database_id = "a3b24c2c-0dfa-4ec5-beec-7282eb04b184"
+
+[[kv_namespaces]]
+binding = "AUTH"
+id = "d45bb3663f1f4bfeb01b33e2dc2cd08d"
