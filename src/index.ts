@@ -74,7 +74,7 @@ async function handleDigest(request: Request, env: Env): Promise<Response> {
         body.score || null,
         themes,
         tags,
-        body.date || null,
+        toIsoOrNull(body.date),
         new Date().toISOString()
       )
       .run()
@@ -177,4 +177,11 @@ async function fetchArticlesCountBySource(env: Env): Promise<Response> {
     .all()
 
   return Response.json({ data: results })
+}
+
+// ======= HELPERS ========
+function toIsoOrNull(raw: unknown): string | null {
+  if (typeof raw !== "string" || !raw.trim()) return null
+  const d = new Date(raw)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString()
 }
