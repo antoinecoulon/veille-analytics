@@ -47,7 +47,7 @@ async function classifyArticles(article) {
 }
 
 function escape(str) {
-  return str.replace(/'/g, "''")
+  return str.replaceAll('\'', "''")
 }
 
 async function main() {
