@@ -19,6 +19,10 @@ export default {
     if (request.method === "GET" && url.pathname === "/api/stats/themes") {
       return fetchArticlesCountByTheme(env)
     }
+
+    if (request.method === "GET" && url.pathname === "/api/stats/sources") {
+      return fetchArticlesCountBySource(env)
+    }
     
     return new Response("VeilleAnalytics API - OK");
   }
@@ -155,6 +159,19 @@ async function fetchArticlesCountByTheme(env: Env): Promise<Response> {
         FROM articles, json_each(articles.themes_mistral)
         WHERE articles.themes_mistral IS NOT NULL
         GROUP BY value
+        ORDER BY count DESC
+      `)
+    .all()
+
+  return Response.json({ data: results })
+}
+
+async function fetchArticlesCountBySource(env: Env): Promise<Response> {
+  const { results } = await env.DB
+    .prepare(`
+        SELECT source, COUNT(*) AS count
+        FROM articles
+        GROUP BY source
         ORDER BY count DESC
       `)
     .all()
