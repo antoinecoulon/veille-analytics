@@ -23,6 +23,10 @@ export default {
     if (request.method === "GET" && url.pathname === "/api/stats/sources") {
       return fetchArticlesCountBySource(env)
     }
+
+    if (request.method === "GET" && url.pathname === "/api/stats/timeline") {
+      return fetchArticlesTimeline(env)
+    }
     
     return new Response("VeilleAnalytics API - OK");
   }
@@ -173,6 +177,20 @@ async function fetchArticlesCountBySource(env: Env): Promise<Response> {
         FROM articles
         GROUP BY source
         ORDER BY count DESC
+      `)
+    .all()
+
+  return Response.json({ data: results })
+}
+
+async function fetchArticlesTimeline(env: Env): Promise<Response> {
+  const { results } = await env.DB
+    .prepare(`
+        SELECT strftime('%Y-%m-%d', date_article) AS jour, COUNT(*) AS count
+        FROM articles
+        WHERE date_article IS NOT NULL
+        GROUP BY jour
+        ORDER BY jour ASC
       `)
     .all()
 
