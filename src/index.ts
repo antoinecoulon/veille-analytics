@@ -10,6 +10,15 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/ingest") {
       return handleDigest(request, env)
     }
+
+    if (request.method === "GET" && url.pathname === "/api/articles") {
+      const params = url.searchParams
+      return fetchArticles(params, env)
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/stats/themes") {
+      return fetchArticlesCountByTheme(env)
+    }
     
     return new Response("VeilleAnalytics API - OK");
   }
@@ -76,4 +85,79 @@ async function handleDigest(request: Request, env: Env): Promise<Response> {
       headers: { "Content-Type": "application/json" },
     })
   }
+}
+
+async function fetchArticles(params: URLSearchParams, env: Env): Promise<Response> {
+  const page = Math.max(1, Number.parseInt(params.get("page") ?? "1", 10) || 1)
+  const limit = Math.min(100, Math.max(1, Number.parseInt(params.get("limit") ?? "20", 10) || 20))
+  const offset = (page - 1) * limit
+
+  const conditions: string[] = []
+  const binds: unknown[] = []
+
+  const theme = params.get("theme")
+  if (theme) {
+    conditions.push("themes_mistral IS NOT NULL AND EXISTS (SELECT 1 FROM json_each(themes_mistral) WHERE value = ?)")
+    binds.push(theme)
+  }
+
+  const source = params.get("source")
+  if (source) {
+    conditions.push("source = ?")
+    binds.push(source)
+  }
+
+  const categorie = params.get("categorie")
+  if (categorie) {
+    conditions.push("categorie_mistral = ?")
+    binds.push(categorie)
+  }
+
+  const scoreMin = params.get("score_min")
+  if (scoreMin !== null) {
+    const n = Number.parseInt(scoreMin, 10)
+    if (!Number.isNaN(n)) {
+      conditions.push("score_mistral >= ?")
+      binds.push(n)
+    }
+  }
+
+  const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""
+
+  const countRow = await env.DB
+    .prepare(`SELECT COUNT(*) AS total FROM articles ${whereClause}`)
+    .bind(...binds)
+    .first<{ total: number }>()
+
+  const total = countRow?.total ?? 0
+
+  const { results } = await env.DB
+    .prepare(`SELECT * FROM articles ${whereClause} ORDER BY date_article DESC, date_collecte DESC LIMIT ? OFFSET ?`)
+    .bind(...binds, limit, offset)
+    .all()
+
+  const data = (results as any[]).map((row) => ({
+    ...row,
+    themes_mistral: row.themes_mistral ? JSON.parse(row.themes_mistral) : [],
+    tags: row.tags ? JSON.parse(row.tags) : []
+  }))
+
+  return Response.json({
+    data,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+  })
+}
+
+async function fetchArticlesCountByTheme(env: Env): Promise<Response> {
+  const { results } = await env.DB
+    .prepare(`
+        SELECT value AS theme, COUNT(*) AS count
+        FROM articles, json_each(articles.themes_mistral)
+        WHERE articles.themes_mistral IS NOT NULL
+        GROUP BY value
+        ORDER BY count DESC
+      `)
+    .all()
+
+  return Response.json({ data: results })
 }
