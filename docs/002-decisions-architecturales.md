@@ -78,3 +78,14 @@ Ce document trace les écarts entre le document de conception initiale et les ch
 **Contexte** : les appels à open-mistral-nemo échouent avec un rate limiter à 2-5 secondes.
 **Décision** : rate limiter à 15 secondes entre chaque appel API.
 **Conséquence** : le traitement de 50 articles prend ~12 minutes. Acceptable pour un lancement manuel.
+
+---
+
+## D09 — Normalisation des dates à l'ingestion (ISO 8601)
+
+**Date** : Juin 2026
+**Contexte** : les flux RSS fournissent la date de publication au format RFC 822 (`Wed, 28 Jan 2026 15:00:00 +0000`), stockée telle quelle dans `date_article`. SQLite ne sait pas interpréter ce format et attend de l'ISO 8601. Les agrégats temporel retournait donc `NULL`.
+**Décision** : normaliser la date en ISO 8601 à la source, dans le Worker d'ingestion (`handleDigest`), avant insertion.
+**Raison** : corriger la cause plutôt que la contourner à chaque lecture. Une conversion côté lecture aurait dû être répétée dans chaque endpoint et aurait empêché l'usage des fonctions SQL natives.
+**Conséquence** : les nouvelles ingestions arrivent en ISO. Le stock historique (392 articles) a été normalisé en une opération ponctuelle.
+**Alternative envisagée** : grouper la timeline sur `date_collecte` (déjà en ISO). Rejeté car cette colonne mesure la date de collecte, pas la date de publication, moins adapté à une veille.
