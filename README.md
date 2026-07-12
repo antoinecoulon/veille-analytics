@@ -9,10 +9,10 @@ Un outil personnel qui collecte des articles tech via des flux RSS, les classifi
 ## Architecture
 
 ```
-Node-RED (local)          Cloudflare Worker         Dashboard (à venir)
-Collecte RSS          →   API ingestion + lecture  →  Nuxt.js / Vercel
-Classification Mistral     Cloudflare D1 (SQLite)
-Email récapitulatif        Cloudflare KV (auth)
+Node-RED (local)          Cloudflare Worker         Dashboard
+Collecte RSS          →   API ingestion + lecture  →  Nuxt 4 / Cloudflare Pages
+Classification Mistral     Cloudflare D1 (SQLite)       proxy /api → Worker
+Email récapitulatif        Cloudflare KV (auth API)     Better Auth / D1 dédiée
 ```
 
 ## Stack
@@ -23,8 +23,9 @@ Email récapitulatif        Cloudflare KV (auth)
 | Classification | Mistral AI (open-mistral-nemo) |
 | ETL + API | Cloudflare Workers |
 | Base de données | Cloudflare D1 (SQLite) |
-| Authentification API | Cloudflare KV |
-| Dashboard (à venir) | Nuxt.js sur Vercel |
+| Authentification API (ingestion) | Cloudflare KV |
+| Dashboard | Nuxt 4 sur Cloudflare Pages |
+| Authentification dashboard | Better Auth (cœur) + D1 dédiée |
 | ML (à venir) | Hugging Face Spaces |
 | IaC (à venir) | Terraform |
 | CI/CD (à venir) | GitHub Actions |
@@ -83,7 +84,7 @@ Content-Type: application/json
 }
 ```
 
-### Lecture (à venir — phase 2)
+### Lecture
 
 ```
 GET /api/articles
