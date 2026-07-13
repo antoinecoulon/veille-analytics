@@ -24,11 +24,11 @@ Email récapitulatif        Cloudflare KV (auth API)     Better Auth / D1 dédi�
 | ETL + API | Cloudflare Workers |
 | Base de données | Cloudflare D1 (SQLite) |
 | Authentification API (ingestion) | Cloudflare KV |
-| Dashboard | Nuxt 4 sur Cloudflare Pages |
+| Dashboard | Nuxt 4 sur Cloudflare Workers |
 | Authentification dashboard | Better Auth (cœur) + D1 dédiée |
 | ML (à venir) | Hugging Face Spaces |
 | IaC (à venir) | Terraform |
-| CI/CD (à venir) | GitHub Actions |
+| CI/CD | GitHub Actions (typecheck + lint + deploy Worker) |
 
 ## Installation
 
@@ -48,6 +48,10 @@ npx wrangler whoami
 ```
 
 ### Déploiement du Worker
+
+Automatique via GitHub Actions : chaque push sur `main` déclenche le job `deploy`
+(`.github/workflows/ci.yml`) après le passage du typecheck + lint. Déploiement manuel
+possible en local :
 
 ```bash
 npx wrangler deploy
