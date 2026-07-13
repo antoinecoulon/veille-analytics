@@ -1,4 +1,6 @@
-interface Env {
+import { normalizeTags, toIsoOrNull, parseArticleRow } from "./lib/normalize"
+
+export interface Env {
   DB: D1Database;
   AUTH: KVNamespace;
 }
@@ -55,9 +57,7 @@ async function handleDigest(request: Request, env: Env): Promise<Response> {
     return new Response("Champs 'title' et 'link' obligatoires", { status: 400 })
   }
 
-  const tags = Array.isArray(body.tags)
-    ? JSON.stringify(body.tags.map((t: string) => t.toLowerCase().trim()))
-    : "[]"
+  const tags = normalizeTags(body.tags)
 
   const themes = Array.isArray(body.themes)
     ? JSON.stringify(body.themes)
@@ -144,11 +144,7 @@ async function fetchArticles(params: URLSearchParams, env: Env): Promise<Respons
     .bind(...binds, limit, offset)
     .all()
 
-  const data = (results as any[]).map((row) => ({
-    ...row,
-    themes_mistral: row.themes_mistral ? JSON.parse(row.themes_mistral) : [],
-    tags: row.tags ? JSON.parse(row.tags) : []
-  }))
+  const data = (results as Record<string, unknown>[]).map(parseArticleRow)
 
   return Response.json({
     data,
@@ -195,11 +191,4 @@ async function fetchArticlesTimeline(env: Env): Promise<Response> {
     .all()
 
   return Response.json({ data: results })
-}
-
-// ======= HELPERS ========
-function toIsoOrNull(raw: unknown): string | null {
-  if (typeof raw !== "string" || !raw.trim()) return null
-  const d = new Date(raw)
-  return Number.isNaN(d.getTime()) ? null : d.toISOString()
 }
