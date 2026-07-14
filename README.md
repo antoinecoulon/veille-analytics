@@ -27,7 +27,7 @@ Email récapitulatif        Cloudflare KV (auth API)     Better Auth / D1 dédi�
 | Dashboard | Nuxt 4 sur Cloudflare Workers |
 | Authentification dashboard | Better Auth (cœur) + D1 dédiée |
 | ML (à venir) | Hugging Face Spaces |
-| IaC (à venir) | Terraform |
+| IaC | Terraform (D1 + KV) |
 | CI/CD | GitHub Actions (typecheck + lint + tests + deploy Worker) |
 | Tests | Vitest + @cloudflare/vitest-pool-workers (D1 Miniflare) |
 
@@ -66,6 +66,12 @@ pnpm test
 
 Tests unitaires (normalisation) et d'intégration (endpoints sur une D1 Miniflare réelle) via
 `@cloudflare/vitest-pool-workers`. Lancés aussi dans le job `quality` de la CI.
+
+### Infrastructure (Terraform)
+
+L'infrastructure durable (bases D1 des deux projets + namespace KV) est décrite en code dans
+[`terraform/`](terraform/). Le code des Workers reste déployé par wrangler / Workers Builds —
+voir le [README dédié](terraform/README.md) pour le détail du découpage IaC / CD.
 
 ### Base de données
 
