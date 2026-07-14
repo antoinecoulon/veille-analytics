@@ -409,12 +409,38 @@ L'objectif est de déployer un modèle ML, le comparer à Mistral, et enrichir l
 
 ### Étape 12 — Annotation manuelle
 
-- [ ]  Exporter ~100 articles depuis D1 (diversifiés en thèmes et sources)
-- [ ]  Pour chaque article, attribuer manuellement les thèmes corrects (ground truth)
-- [ ]  Format simple : CSV avec colonnes `id, themes_manuels`
-- [ ]  Importer dans D1 ou garder en fichier séparé pour l'évaluation
+- [x]  Exporter ~100 articles depuis D1 (diversifiés en thèmes et sources) — export
+  `wrangler d1 execute --remote --json` (503 articles en base) → échantillon **stratifié**
+  déterministe `scripts/sample-annotation.mjs` (quota par thème pour couvrir les 7, round-robin
+  sur les sources pour la diversité → 100 articles, 13 sources, 7 thèmes représentés)
+- [x]  Pour chaque article, attribuer manuellement les thèmes corrects (ground truth) — méthode
+  **assistée + revue humaine** : Claude classe **à l'aveugle** (titre + résumé, **sans**
+  `themes_mistral`) → suggestions ; **page HTML locale autonome** (`annotation/index.html`,
+  offline, cases pré-cochées, `localStorage`) pour **réviser/corriger** puis exporter
+- [x]  Format simple : CSV avec colonnes `id, themes_manuels` (thèmes **`|`-séparés** car la
+  virgule est le séparateur CSV) — validé + canonicalisé par `scripts/finalize-annotations.mjs`
+- [x]  Importer dans D1 ou garder en fichier séparé pour l'évaluation — **fichier séparé**
+  (`data/annotations.csv`) : garde la D1 de prod propre, suffisant pour l'éval offline (Étape 13)
 
 **Résultat** : un jeu de validation indépendant de Mistral.
+
+> **Note Étape 12** — décisions et pièges :
+> - **Indépendance = point critique.** Le but est un jeu **indépendant** de Mistral. Deux garde-fous :
+>   (a) la classification de Claude est **aveugle** — `annotation_sample.json` **exclut**
+>   `themes_mistral` (seul fichier lu pour suggérer) ; (b) la page d'annotation **n'affiche jamais**
+>   `themes_mistral` (pas d'ancrage de la revue). C'est la **revue humaine** qui fait la vérité
+>   terrain ; les suggestions ne font qu'accélérer.
+> - **Pas de binding D1 en script** (WSL : `getPlatformProxy()` se bloque, cf. Note C4) → export
+>   via `wrangler d1 execute --remote --json`, forme `result[0].results`, comme les scripts existants.
+> - **Nouveaux scripts en `.mjs`** (le repo est CommonJS, `.mjs` = ESM explicite sans toucher
+>   `package.json`). Premier code CSV du repo.
+> - **Sanity-check inclus** : `finalize-annotations.mjs` affiche une concordance brute
+>   (accord exact + Jaccard) vs `themes_mistral` — indicateur, **pas** la métrique officielle
+>   (le vrai calcul de précision est l'Étape 13). L'export `data/articles_export.json` **conserve**
+>   `themes_mistral` pour cette éval.
+> - **Fichiers produits** : `scripts/sample-annotation.mjs`, `scripts/build-annotation-page.mjs`,
+>   `scripts/finalize-annotations.mjs`, `annotation/index.html`, `data/articles_export.json`,
+>   `data/annotation_sample.json`, `data/annotation_suggestions.json`, `data/annotations.csv` (livrable).
 
 ### Étape 13 — Déploiement zero-shot sur Hugging Face
 
