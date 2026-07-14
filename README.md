@@ -10,7 +10,7 @@ Un outil personnel qui collecte des articles tech via des flux RSS, les classifi
 
 ```
 Node-RED (local)          Cloudflare Worker         Dashboard
-Collecte RSS          →   API ingestion + lecture  →  Nuxt 4 / Cloudflare Pages
+Collecte RSS          →   API ingestion + lecture  →  Nuxt 4 / Cloudflare Workers
 Classification Mistral     Cloudflare D1 (SQLite)       proxy /api → Worker
 Email récapitulatif        Cloudflare KV (auth API)     Better Auth / D1 dédiée
 ```
@@ -116,7 +116,7 @@ GET /api/stats/sources
 ## Avancement
 
 - [x] Phase 1 — Fondations (collecte, ETL, D1, migration historique)
-- [ ] Phase 2 — API lecture + Dashboard + CI/CD
+- [x] Phase 2 — API lecture + Dashboard + CI/CD
 - [ ] Phase 3 — ML + Analytics
 - [ ] Phase 4 — Finalisation + documentation M3.2
 
