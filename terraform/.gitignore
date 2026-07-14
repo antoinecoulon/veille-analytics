@@ -1,0 +1,11 @@
+# Répertoire de travail du provider (téléchargé par `terraform init`)
+.terraform/
+
+# État local : contient des identifiants de ressources, non versionné
+*.tfstate
+*.tfstate.backup
+
+# Valeurs de variables (account_id) — fournies localement, non versionnées
+terraform.tfvars
+
+crash.log
