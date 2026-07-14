@@ -83,6 +83,33 @@ npx wrangler d1 create veille-analytics
 npx wrangler d1 migrations apply veille-analytics --remote
 ```
 
+### Annotation manuelle (jeu de validation — Étape 12)
+
+Construit un jeu de validation indépendant (~100 articles annotés à la main) pour évaluer plus
+tard la classification thématique (Mistral, puis modèle ML). Les thèmes de référence sont
+**séparés** de la prédiction `themes_mistral`.
+
+```bash
+# 1. Exporter les articles de la D1 distante
+npx wrangler d1 execute veille-analytics --remote --json \
+  --command "SELECT id, titre, resume, source, url, themes_mistral, date_article FROM articles ORDER BY id" \
+  > data/articles_export.json
+
+# 2. Échantillon stratifié ~100 (couvre les 7 thèmes + diversifie les sources)
+node scripts/sample-annotation.mjs
+
+# 3. Générer la page d'annotation (les suggestions aveugles vivent dans data/annotation_suggestions.json)
+node scripts/build-annotation-page.mjs
+
+# 4. Ouvrir annotation/index.html dans un navigateur, réviser les thèmes, « Exporter CSV »
+#    puis déposer le fichier téléchargé dans data/annotations.csv
+
+# 5. Valider + canonicaliser le CSV, afficher distribution et concordance brute vs Mistral
+node scripts/finalize-annotations.mjs
+```
+
+Le livrable est `data/annotations.csv` (`id, themes_manuels` ; thèmes `|`-séparés).
+
 ## API
 
 ### Ingestion
