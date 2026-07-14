@@ -444,13 +444,49 @@ L'objectif est de déployer un modèle ML, le comparer à Mistral, et enrichir l
 
 ### Étape 13 — Déploiement zero-shot sur Hugging Face
 
-- [ ]  Créer un Space sur Hugging Face (Gradio ou FastAPI)
-- [ ]  Charger un modèle zero-shot (ex. `MoritzLaurer/deberta-v3-base-zeroshot-v2`)
-- [ ]  Endpoint : reçoit titre + résumé, retourne les probabilités par thème
-- [ ]  Tester sur quelques articles manuellement
-- [ ]  Comparer avec les annotations manuelles : calculer la précision
+Code dans le **repo dédié `../veille-ml`** (un HF Space *est* un repo git ; cohérent avec le
+pattern multi-repo). Cœur partagé `classifier.py`, UI `app.py` (Gradio), éval `evaluate.py`.
 
-**Résultat** : un modèle ML accessible via API qui classifie les articles par thème.
+- [~]  Créer un Space sur Hugging Face (**Gradio**) — code prêt et poussé sur le Space, mais
+  **hébergement différé** : HF a **verrouillé CPU basic ET ZeroGPU derrière un compte PRO**
+  (constaté au déploiement, juillet 2026). Décision : rester en **local** pour l'Étape 13
+  (l'app Gradio tourne en `python app.py`) ; l'endpoint **cloud** sera porté par l'**Inference
+  API serverless HF** au moment où on en a besoin (Étape 14, appel depuis le Worker)
+- [x]  Charger un modèle zero-shot — **multilingue** `MoritzLaurer/mDeBERTa-v3-base-mnli-xnli`
+  (le contenu est en **français** → le modèle anglophone du plan initial ne convient pas)
+- [x]  Endpoint : reçoit titre + résumé, retourne les probabilités par thème — `app.py` (UI Gradio
+  `Textbox×2 → Label`), multi-étiquette (`multi_label=True`) ; API Gradio locale (l'endpoint cloud
+  passera par l'Inference API à l'Étape 14)
+- [x]  Tester sur quelques articles manuellement — sanity FR OK (article K8s → DevOps/Infra en tête) ;
+  UI Gradio locale (`127.0.0.1:7860`) + exemples réels intégrés
+- [x]  Comparer avec les annotations manuelles : calculer la précision — `evaluate.py` sur les 100
+  articles annotés : **ML zero-shot micro-F1 = 0,525** (seuil 0,7 ; P=0,49 R=0,57) vs
+  **baseline Mistral micro-F1 = 0,667** (P=0,57 R=0,81). Résultats complets dans `eval_results.json`.
+
+**Résultat** : un modèle ML qui classifie les articles par thème (exécutable en local ;
+hébergement cloud via Inference API à l'Étape 14, cf. verrou tarifaire HF ci-dessous).
+
+> **Note Étape 13** — décisions et enseignements :
+> - **Français = décision structurante.** Modèle **multilingue** (mDeBERTa-v3 XNLI) + **hypothèses
+>   NLI descriptives FR** (`LABEL_MAP` : `"IA/ML" → "intelligence artificielle et machine learning"`…)
+>   plutôt que les labels bruts — le zero-shot est bien plus précis ainsi. Template
+>   `"Cet article parle de {}."`.
+> - **Cœur partagé `classifier.py`** entre l'app déployée et l'éval → le Space et la métrique
+>   utilisent exactement la même logique.
+> - **Multi-label** : scores sigmoïdes indépendants (`multi_label=True`) ; `evaluate.py` balaye
+>   seuils (0,3-0,7) et top-k (1-3), retient le **micro-F1 max** (seuil 0,7).
+> - **Mistral bat le zero-shot prêt-à-l'emploi** (0,667 vs 0,525 micro-F1) — matériau Check/Act
+>   honnête pour le M3.2. Fort sur Sécurité (F1 0,75), IA/ML et DevOps (~0,62) ; faible sur
+>   Pratiques/Qualité (0,22). Le fine-tuning (Étape 17) est le levier pour combler l'écart.
+> - **Éval en local** (venv + transformers, torch CPU) : reproductible, hors-ligne, pas de
+>   dépendance au cold-start du Space. Le venv sert de toute façon à développer l'app Gradio.
+> - **Verrou tarifaire HF (juillet 2026)** : impossible de déployer gratuitement — CPU basic et
+>   ZeroGPU exigent désormais un compte **PRO** (le build ZeroGPU refusait déjà `torch==2.13.0+cpu`,
+>   et le passage en CPU basic est bloqué sans PRO). L'hébergement d'un Space est donc **différé** ;
+>   le code (`app.py`) reste valable si on prend PRO plus tard. Pour l'Étape 14, on vise l'**Inference
+>   API serverless** (appel du modèle hébergé via token, sans Space) — dispo à re-vérifier alors.
+> - **Repo `veille-ml`** : `classifier.py`, `app.py`, `evaluate.py`, `requirements.txt`,
+>   `README.md`, `eval_results.json`.
 
 ### Étape 14 — Intégration ML dans le pipeline
 
