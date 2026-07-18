@@ -10,3 +10,9 @@ dates_prod.json
 *:Zone.Identifier
 data/articles_sans_ml.json
 data/backfill_themes_ml.sql
+
+# PySpark (Étape 16)
+spark/.venv/
+__pycache__/
+metastore_db/
+derby.log

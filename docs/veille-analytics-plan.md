@@ -578,12 +578,64 @@ Pratiques/Qualité 43.
 
 ### Étape 16 — PySpark (batch local)
 
-- [ ]  Exporter les données de D1 en CSV
-- [ ]  Écrire un script PySpark : fréquences par thème, cooccurrences de tags, tendances par fenêtre glissante
-- [ ]  Exécuter localement, sauvegarder les résultats en CSV
-- [ ]  Documenter le script et les résultats
+- [x]  Exporter les données de D1 en CSV — `wrangler d1 execute --remote --json` (colonnes id,
+  titre, url, source, date_article, themes_mistral, themes_ml, score_confiance_ml, tags) →
+  `scripts/export-spark-csv.mjs` → `data/articles_spark.csv` (529 articles)
+- [x]  Écrire un script PySpark : fréquences par thème, cooccurrences de tags, tendances par
+  fenêtre glissante — `spark/analyse.py`, schéma CSV explicite (pas d'`inferSchema`), 3 analyses :
+  `explode`/`from_json` + `groupBy` (fréquences), auto-jointure `tag_a < tag_b` + seuil de support
+  (cooccurrences), `F.window` tumbling 7 jours + `Window`/`rowsBetween` (moyenne glissante)
+- [x]  Exécuter localement, sauvegarder les résultats en CSV — `spark-submit spark/analyse.py`
+  depuis la racine, mode `local[*]`, 3 CSV dans `spark/out/` (`freq_themes.csv`,
+  `cooccurrences_tags.csv`, `tendances_hebdo.csv`)
+- [x]  Documenter le script et les résultats — `spark/README.md` (setup, pipeline, pièges,
+  aperçu des résultats)
 
-**Résultat** : compétence C29 couverte. Résultats exploitables pour le M3.2.
+**Résultat** : compétence C29 couverte — batch PySpark exécuté avec succès sur les 529 articles
+prod. Fréquences par thème (Mistral vs ML), 30 paires de tags cooccurrents (support ≥ 5) et
+44 semaines de tendances (moyenne glissante 4 semaines, ~30 articles/semaine sur la période
+récente). **Contrôle croisé exact** : les fréquences Mistral non filtrées du batch coïncident
+ligne à ligne avec `GET /api/stats/themes` en prod, et les 3 labels parasites détectés par la
+whitelist des thèmes canoniques (`hors_referentiel=true`) sont les mêmes que ceux déjà repérés à
+l'Étape 15.
+
+> **Note Étape 16** — décisions et pièges :
+> - **Venv via `uv`** : `python3.12-venv`/`ensurepip` absents du système (WSL2/Ubuntu) →
+>   `python3 -m venv` plante à la création. Contournement : `uv venv spark/.venv --python 3.12`,
+>   qui ne dépend pas d'`ensurepip`, puis `uv pip install -r spark/requirements.txt`
+>   (`pyspark==3.5.4`).
+> - **Piège `SPARK_HOME`/`PATH` de `spark-submit`** : le wrapper résout `SPARK_HOME` via le
+>   `python3` du `PATH` — sans le venv activé, il retombe sur le python système (sans `pyspark`) et
+>   échoue (`find_spark_home` → `AttributeError`, puis `/bin/spark-class: No such file or
+>   directory`). Il faut `source spark/.venv/bin/activate` avant `spark-submit spark/analyse.py`,
+>   même en lançant depuis la racine du repo.
+> - **Schéma CSV explicite** (pas d'`inferSchema`) : types stables garantis
+>   (`score_confiance_ml` en `DOUBLE`) sans passage de lecture supplémentaire ; les colonnes
+>   `themes_mistral`/`themes_ml`/`tags` restent des chaînes JSON, parsées à la demande via
+>   `from_json` dans chaque analyse qui en a besoin.
+> - **Whitelist plutôt que blacklist** pour les thèmes : `THEMES_CANONIQUES` (7 thèmes) plutôt
+>   qu'une liste noire — les 3 labels parasites de Mistral (« Produktivité/Outils » [typo],
+>   « IoT », « Infrastructure ») sont détectés automatiquement (`hors_referentiel=true`) sans
+>   maintenance de liste d'exclusion.
+> - **Seuil de support 5** pour les cooccurrences : 1 187 tags distincts sur 529 articles →
+>   distribution très éparse, la plupart des paires n'apparaissent qu'une fois ; le seuil isole
+>   les 30 associations réellement structurantes.
+> - **Window function comme démonstration C29** : `Window.orderBy("semaine").rowsBetween(-3, 0)`
+>   pour la moyenne glissante, en plus de l'agrégation classique (`F.window` tumbling 7 jours) —
+>   mécanique SQL distincte volontairement illustrée. Sans `partitionBy` (≈44 semaines, tout tient
+>   sur une partition), Spark émet un `WARN WindowExec: No Partition Defined` — assumé au vu du
+>   volume, à corriger (partitionner par clé) sur un plus gros jeu de données.
+> - **`coalesce(1)` documenté comme anti-pattern à grande échelle** : nécessaire pour obtenir un
+>   fichier CSV unique (Spark écrit par défaut un répertoire de part-files), acceptable sur 529
+>   lignes, mais supprime le parallélisme d'écriture et risque de saturer un seul exécuteur sur un
+>   vrai volume distribué.
+> - **Contrôle croisé exact avec `/api/stats/themes`** : les fréquences Mistral non filtrées du
+>   batch reproduisent exactement l'agrégation `json_each` déjà en place côté Worker (Étape 15) —
+>   validation croisée entre deux implémentations indépendantes (Spark vs SQL).
+> - **Observation qualité de données** : des tags échappent à la normalisation lowercase
+>   (« DevOps », « IA », « AWS » coexistent avec leurs variantes en minuscules) — héritage probable
+>   de la migration initiale, sans impact sur le calcul des cooccurrences (comptage tel quel) mais
+>   à corriger un jour à la source.
 
 ### Étape 17 (optionnelle) — Fine-tuning
 
