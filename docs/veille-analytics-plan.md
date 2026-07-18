@@ -561,12 +561,20 @@ Pratiques/Qualité 43.
 
 ### Étape 15 — Dashboard v2 (vue ML)
 
-- [ ]  Ajouter la vue comparaison ML : accord/désaccord Mistral vs ML par thème
-- [ ]  Afficher le taux de concordance global
-- [ ]  Possibilité de filtrer les articles où ML et Mistral sont en désaccord
-- [ ]  Ajouter un filtre "Machine Learning" sur la vue détail (table) pour exploiter les props ML : `themes_ml`, `score_confiance_ml` (ex. filtrer par thème ML, seuil de confiance min., présence/absence de classification ML) + colonnes correspondantes dans la table
+- [x]  Vue comparaison ML — page `comparaison-ml.vue` (dashboard) + nouvel endpoint Worker `GET /api/stats/ml-comparison` (calcul TS pur `src/lib/mlComparison.ts`, testé unitairement) ; graphe barres groupées par thème (nouveau composant `charts/BarGrouped.vue`, 3 séries : accord / Mistral seul / ML seul) + entrée « Comparaison ML » dans la sidebar
+- [x]  Taux de concordance global — 4 tuiles (accord exact, chevauchement, Jaccard moyen, n comparés). Mesuré sur les données prod (2026-07-18, 527 articles comparables) : **accord exact 8 %** (41), **chevauchement 79 %** (417), **Jaccard moyen 0,389**
+- [x]  Filtre désaccord — définition retenue = **aucun thème commun** (les deux classifications présentes, intersection vide) ; param `desaccord=1` côté Worker (SQL `json_each` + `NOT EXISTS`), filtre « Accord ML/Mistral » sur la table, et lien profond `/?desaccord=1` depuis la page comparaison (110 articles en désaccord au 2026-07-18)
+- [x]  Filtre « Machine Learning » sur la vue détail — 4 filtres (thème ML via `theme_ml`, confiance min. via `score_ml_min` [≥ 0,5/0,7/0,9], présence/absence via `ml=oui|non`, accord/désaccord) + colonnes « Thèmes ML » (badges, `null` → « — », `[]` → « aucun ≥ seuil ») et « Confiance » (badge coloré par seuil) dans la table et la vue cartes mobile
 
-**Résultat** : le dashboard montre visuellement la comparaison entre les deux approches.
+**Résultat** : le dashboard montre la comparaison des deux approches, chiffres de prod à l'appui.
+
+> **Note Étape 15** — décisions et enseignements :
+> - **Concordance calculée côté Worker en TS** (`computeMlComparison`, fonction pure) plutôt qu'en SQL : ~500 lignes à agréger, logique ensembliste plus lisible et testable ; le SQL reste pour les filtres de liste (json_each).
+> - **Sémantique** : « comparables » = les deux classifications non NULL ; accord exact = ensembles identiques (`[]` ≡ `[]` compris) ; Jaccard(∅,∅) = 1 par convention ; désaccord = intersection vide.
+> - **Enseignement (matériau Check/Act M3.2)** : l'accord exact est rare (8 %) mais le chevauchement élevé (79 %) — cohérent avec l'éval Étape 13 : le ML sur-assigne « Développement » (174 articles ML seul) et sous-assigne « Pratiques/Qualité » (135 Mistral seul vs 17 accords, F1 0,22 à l'éval) ; « IA/ML » et « Sécurité » sont les mieux alignés.
+> - **Découverte qualité de données** : 3 labels hors référentiel dans `themes_mistral` prod (« Produktivité/Outils » [typo], « Infrastructure », « IoT », 1 article chacun) — l'endpoint les **exclut** du par_theme (seuls les 7 thèmes canoniques sortent) ; à nettoyer un jour en base.
+> - **12 nouveaux tests Worker** (40 au total) : unitaires `computeMlComparison` + intégration des 4 filtres et de l'endpoint. Dashboard : typecheck/lint + smoke SSR.
+> - **Skill dataviz appliqué** au composant `BarGrouped.vue` : palette catégorielle existante validée (script CVD/contraste), légende systématique (≥ 2 séries), couleurs par entité (jamais par rang).
 
 ### Étape 16 — PySpark (batch local)
 

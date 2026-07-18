@@ -169,6 +169,67 @@ describe("Classification ML (waitUntil + Inference API HF)", () => {
   })
 })
 
+describe("Filtres ML sur GET /api/articles + GET /api/stats/ml-comparison", () => {
+  // 3 articles : accord ML/Mistral, désaccord total, sans classification ML.
+  beforeEach(async () => {
+    await ingest({ title: "A1", link: "https://x/a1", themes: ["IA/ML"] })
+    await ingest({ title: "A2", link: "https://x/a2", themes: ["Sécurité"] })
+    await ingest({ title: "A3", link: "https://x/a3", themes: ["Architecture"] })
+    await env.DB.prepare("UPDATE articles SET themes_ml = ?, score_confiance_ml = ? WHERE url = ?")
+      .bind('["IA/ML"]', 0.9, "https://x/a1").run()
+    await env.DB.prepare("UPDATE articles SET themes_ml = ?, score_confiance_ml = ? WHERE url = ?")
+      .bind('["Développement"]', 0.8, "https://x/a2").run()
+  })
+
+  async function urls(query: string): Promise<string[]> {
+    const res = await get(`/api/articles?${query}`)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { data: Array<{ url: string }> }
+    return body.data.map((a) => a.url).sort()
+  }
+
+  it("theme_ml : filtre sur les thèmes ML (pas Mistral)", async () => {
+    expect(await urls("theme_ml=IA/ML")).toEqual(["https://x/a1"])
+    expect(await urls("theme_ml=Développement")).toEqual(["https://x/a2"])
+  })
+
+  it("score_ml_min : seuil de confiance ML", async () => {
+    expect(await urls("score_ml_min=0.85")).toEqual(["https://x/a1"])
+    expect(await urls("score_ml_min=0.5")).toEqual(["https://x/a1", "https://x/a2"])
+  })
+
+  it("ml=oui / ml=non : présence ou absence de classification ML", async () => {
+    expect(await urls("ml=oui")).toEqual(["https://x/a1", "https://x/a2"])
+    expect(await urls("ml=non")).toEqual(["https://x/a3"])
+  })
+
+  it("desaccord=1 : aucun thème commun entre Mistral et ML", async () => {
+    expect(await urls("desaccord=1")).toEqual(["https://x/a2"])
+  })
+
+  it("ml-comparison : agrégats globaux + détail par thème", async () => {
+    const res = await get("/api/stats/ml-comparison")
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: {
+        global: Record<string, number>
+        par_theme: Array<{ theme: string; accord: number; mistral_seul: number; ml_seul: number }>
+      }
+    }
+    expect(body.data.global).toEqual({
+      total: 3,
+      compares: 2,
+      accord_exact: 1,
+      chevauchement: 1,
+      jaccard_moyen: 0.5
+    })
+    const byTheme = Object.fromEntries(body.data.par_theme.map((t) => [t.theme, t]))
+    expect(byTheme["IA/ML"]).toMatchObject({ accord: 1 })
+    expect(byTheme["Sécurité"]).toMatchObject({ mistral_seul: 1 })
+    expect(byTheme["Développement"]).toMatchObject({ ml_seul: 1 })
+  })
+})
+
 describe("GET /api/stats/*", () => {
   beforeEach(async () => {
     await ingest(article)
