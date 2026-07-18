@@ -1,5 +1,6 @@
 import { normalizeTags, toIsoOrNull, parseArticleRow } from "./lib/normalize"
 import { classifyArticle } from "./lib/classifyMl"
+import { computeMlComparison, type MlComparisonRow } from "./lib/mlComparison"
 
 export interface Env {
   DB: D1Database;
@@ -30,6 +31,10 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/api/stats/timeline") {
       return fetchArticlesTimeline(env)
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/stats/ml-comparison") {
+      return fetchMlComparison(env)
     }
     
     return new Response("VeilleAnalytics API - OK");
@@ -155,6 +160,36 @@ async function fetchArticles(params: URLSearchParams, env: Env): Promise<Respons
     }
   }
 
+  const themeMl = params.get("theme_ml")
+  if (themeMl) {
+    conditions.push("themes_ml IS NOT NULL AND EXISTS (SELECT 1 FROM json_each(themes_ml) WHERE value = ?)")
+    binds.push(themeMl)
+  }
+
+  const scoreMlMin = params.get("score_ml_min")
+  if (scoreMlMin !== null) {
+    const n = Number.parseFloat(scoreMlMin)
+    if (!Number.isNaN(n)) {
+      conditions.push("score_confiance_ml >= ?")
+      binds.push(n)
+    }
+  }
+
+  // Présence/absence d'une classification ML.
+  const ml = params.get("ml")
+  if (ml === "oui") {
+    conditions.push("themes_ml IS NOT NULL")
+  } else if (ml === "non") {
+    conditions.push("themes_ml IS NULL")
+  }
+
+  // Désaccord = les deux classifications existent et n'ont aucun thème commun.
+  if (params.get("desaccord") === "1") {
+    conditions.push(`themes_mistral IS NOT NULL AND themes_ml IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM json_each(themes_mistral) AS a
+      WHERE EXISTS (SELECT 1 FROM json_each(themes_ml) AS b WHERE b.value = a.value))`)
+  }
+
   const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""
 
   const countRow = await env.DB
@@ -202,6 +237,14 @@ async function fetchArticlesCountBySource(env: Env): Promise<Response> {
     .all()
 
   return Response.json({ data: results })
+}
+
+async function fetchMlComparison(env: Env): Promise<Response> {
+  const { results } = await env.DB
+    .prepare("SELECT themes_mistral, themes_ml FROM articles")
+    .all<MlComparisonRow>()
+
+  return Response.json({ data: computeMlComparison(results) })
 }
 
 async function fetchArticlesTimeline(env: Env): Promise<Response> {
