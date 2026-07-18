@@ -110,6 +110,25 @@ node scripts/finalize-annotations.mjs
 
 Le livrable est `data/annotations.csv` (`id, themes_manuels` ; thèmes `|`-séparés).
 
+### Batch PySpark (Étape 16)
+
+Analyse distribuée locale (fréquences par thème, cooccurrences de tags, tendances hebdomadaires).
+Détails, prérequis et pièges rencontrés dans [`spark/README.md`](spark/README.md).
+
+```bash
+# 1. Export D1 → JSON
+npx wrangler d1 execute veille-analytics --remote --json --command \
+  "SELECT id, titre, url, source, date_article, themes_mistral, themes_ml, score_confiance_ml, tags FROM articles" \
+  > data/articles_spark.json
+
+# 2. Conversion JSON → CSV
+node scripts/export-spark-csv.mjs
+
+# 3. Exécution du batch (le venv du batch doit être activé, cf. spark/README.md)
+source spark/.venv/bin/activate
+spark-submit spark/analyse.py
+```
+
 ## API
 
 ### Ingestion
