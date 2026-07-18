@@ -34,27 +34,30 @@ describe("toIsoOrNull", () => {
 })
 
 describe("parseArticleRow", () => {
-  it("parse themes_mistral et tags depuis leur JSON", () => {
+  it("parse themes_mistral, themes_ml et tags depuis leur JSON", () => {
     const row = {
       id: 1,
       titre: "Titre",
       themes_mistral: '["ia","web"]',
+      themes_ml: '["IA/ML"]',
       tags: '["react"]'
     }
     expect(parseArticleRow(row)).toEqual({
       id: 1,
       titre: "Titre",
       themes_mistral: ["ia", "web"],
+      themes_ml: ["IA/ML"],
       tags: ["react"]
     })
   })
 
-  it("renvoie des tableaux vides quand les champs sont null", () => {
-    const row = { id: 2, titre: "Autre", themes_mistral: null, tags: null }
+  it("renvoie des tableaux vides quand les champs sont null (themes_ml reste null : jamais classifié)", () => {
+    const row = { id: 2, titre: "Autre", themes_mistral: null, themes_ml: null, tags: null }
     expect(parseArticleRow(row)).toEqual({
       id: 2,
       titre: "Autre",
       themes_mistral: [],
+      themes_ml: null,
       tags: []
     })
   })
