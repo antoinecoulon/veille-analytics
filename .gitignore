@@ -8,3 +8,5 @@ dates_prod.json
 
 # Artefacts de téléchargement WSL/Windows
 *:Zone.Identifier
+data/articles_sans_ml.json
+data/backfill_themes_ml.sql

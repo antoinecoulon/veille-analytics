@@ -490,12 +490,74 @@ hébergement cloud via Inference API à l'Étape 14, cf. verrou tarifaire HF ci-
 
 ### Étape 14 — Intégration ML dans le pipeline
 
-- [ ]  Modifier le Worker : après ingestion, appeler le Space HF pour obtenir les thèmes ML
-- [ ]  Stocker les résultats dans D1 (`themes_ml`, `score_confiance_ml`)
-- [ ]  Gérer le cas où le Space est en veille (cold start, retry)
-- [ ]  Vérifier sur quelques articles que les deux classifications (Mistral et ML) sont bien présentes
+- [x]  Modifier le Worker : après ingestion, appeler le Space HF pour obtenir les thèmes ML —
+  pas via un Space (verrou PRO, cf. Étape 13) mais via l'**Inference API serverless HF**
+  (provider `hf-inference`, `router.huggingface.co`), vérifiée disponible pour
+  `MoritzLaurer/mDeBERTa-v3-base-mnli-xnli` (juillet 2026, free tier avec rate limits). Appel
+  **asynchrone via `ctx.waitUntil`** après l'INSERT : la réponse 201 part sans attendre HF, un
+  échec ML n'empêche jamais l'ingestion. Classification seulement si l'article est réellement
+  inséré (`meta.changes > 0`, pas de re-classification des doublons ignorés)
+- [x]  Stocker les résultats dans D1 (`themes_ml`, `score_confiance_ml`) — les colonnes
+  **existaient déjà dans `0001_init.sql`** → aucune migration. `themes_ml` = array JSON des
+  thèmes au score ≥ 0,7 (seuil de l'éval Étape 13) ; `[]` = classifié sans thème au-dessus du
+  seuil, `NULL` = jamais classifié. `score_confiance_ml` = score du top-1. Nouveau module
+  `src/lib/classifyMl.ts` (constantes portées de `veille-ml/classifier.py` : LABEL_MAP FR,
+  template, seuil), `parseArticleRow` expose `themes_ml` sur `GET /api/articles`
+- [x]  Gérer le cas où le Space est en veille (cold start, retry) — retry sur 429/5xx (le 503
+  « model loading ») avec backoff borné (~17 s max, fenêtre waitUntil ~30 s) ; en cas d'échec
+  définitif, `themes_ml` reste NULL et l'article est rattrapable par le script de backfill
+  `scripts/classify-ml.mjs` (export D1 → appels HF throttlés → SQL généré
+  `data/backfill_themes_ml.sql` → `wrangler d1 execute --remote --file`, pattern de
+  `reclassify.js`)
+- [x]  Vérifier sur quelques articles que les deux classifications (Mistral et ML) sont bien
+  présentes — 11 nouveaux tests (28 au total) : unitaires sur le mapping/seuil/retry +
+  intégration Miniflare (ingest → `themes_ml` en D1 ; échec HF → 201 quand même ; doublon → un
+  seul appel HF). **Vérifié end-to-end en prod** (2026-07-18, secret posé + déploiement) :
+  ingest de test → 201 en 0,18 s, puis `themes_ml = ["DevOps/Infrastructure","Pratiques/Qualité"]`
+  et `score_confiance_ml = 0,998` en D1 ~20 s plus tard (article de test supprimé ensuite)
 
-**Résultat** : chaque article a une double classification : Mistral + ML.
+**Résultat** : chaque article a une double classification : Mistral (à l'ingestion, synchrone) +
+ML (asynchrone, via l'Inference API serverless HF) — vérifié en prod. Backfill exécuté le
+2026-07-18 : **503/503 articles classifiés, 0 échec** (70 sans thème au-dessus du seuil 0,7 →
+`themes_ml = []`, confiance stockée quand même). Distribution ML : Développement 336,
+Sécurité 187, Architecture 133, IA/ML 128, Productivité/Outils 105, DevOps/Infra 95,
+Pratiques/Qualité 43.
+
+> **Note Étape 14** — décisions et pièges :
+> - **Pas de Space HF, Inference API serverless directement** — cohérent avec le verrou PRO
+>   documenté à l'Étape 13. Provider `hf-inference` via
+>   `router.huggingface.co/hf-inference/models/...`, disponibilité re-vérifiée en juillet 2026
+>   pour `MoritzLaurer/mDeBERTa-v3-base-mnli-xnli` (free tier, rate limits).
+> - **Asynchrone via `ctx.waitUntil`** : la classification ML ne bloque jamais la réponse
+>   d'ingestion (201 immédiat) ; un échec HF est silencieux côté client. Ne classe que les
+>   insertions réelles (`meta.changes > 0`) pour ne pas payer un appel HF sur chaque doublon
+>   renvoyé par `/api/ingest`.
+> - **Colonnes déjà là** : `themes_ml` TEXT et `score_confiance_ml` REAL existaient depuis
+>   `0001_init.sql` (Étape 2) — prévues dès le schéma initial, aucune migration nécessaire à
+>   l'Étape 14. `themes_ml` distingue `NULL` (jamais tenté) de `[]` (tenté, rien au-dessus du
+>   seuil).
+> - **Seuil et mapping portés depuis `veille-ml/classifier.py`** (pas d'appel réseau vers l'autre
+>   repo) : `src/lib/classifyMl.ts` recopie `LABEL_MAP` FR, le template
+>   `"Cet article parle de {}."` et le seuil 0,7 validé à l'Étape 13, pour rester rigoureusement
+>   identique à l'éval.
+> - **Retry borné par la fenêtre `waitUntil`** : le cold start HF (503 « model loading ») peut
+>   prendre plusieurs secondes ; backoff jusqu'à ~17 s cumulés pour rester sous les ~30 s
+>   accordées par Cloudflare à `waitUntil`. Échec définitif → `themes_ml` reste `NULL`,
+>   rattrapable par `scripts/classify-ml.mjs` (backfill offline, même pattern que
+>   `reclassify.js` pour Mistral).
+> - **Piège tests : `fetchMock` de `cloudflare:test` supprimé** dans
+>   `@cloudflare/vitest-pool-workers` ≥ 0.13 (Vitest 4). Contournement : mock direct de
+>   `globalThis.fetch` via `vi.stubGlobal`, possible ici car seuls les appels HF passent par le
+>   fetch global (D1/KV restent des bindings, non interceptés par ce mock).
+> - **Piège tests : `ExecutionContext`** — pour attendre effectivement le `waitUntil` en test, il
+>   faut passer un contexte créé via `createExecutionContext()` et l'attendre avec
+>   `waitOnExecutionContext()` (sinon l'assertion sur `themes_ml` s'exécute avant la fin de la
+>   classification asynchrone).
+> - **Secret `HF_API_TOKEN`** (token HF fine-grained, permission « Inference Providers ») :
+>   `wrangler secret put HF_API_TOKEN` en prod ; en local une seule entrée dans `.env.local`
+>   suffit (wrangler la charge comme secret pour `wrangler dev`/vitest — « Using secrets defined
+>   in .env.local » — et le script de backfill lit la même variable). Posé en prod le
+>   2026-07-18 ; chaîne complète vérifiée dans la foulée (ingest réel → classification en D1).
 
 ### Étape 15 — Dashboard v2 (vue ML)
 

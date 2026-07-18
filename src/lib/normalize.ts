@@ -16,6 +16,8 @@ export function parseArticleRow(row: Record<string, unknown>): Record<string, un
   return {
     ...row,
     themes_mistral: row.themes_mistral ? JSON.parse(row.themes_mistral as string) : [],
+    // null = jamais classifié ; [] = classifié mais aucun thème au-dessus du seuil.
+    themes_ml: row.themes_ml ? JSON.parse(row.themes_ml as string) : null,
     tags: row.tags ? JSON.parse(row.tags as string) : []
   }
 }

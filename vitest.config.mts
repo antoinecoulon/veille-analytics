@@ -12,7 +12,10 @@ export default defineConfig({
       return {
         wrangler: { configPath: "./wrangler.toml" },
         miniflare: {
-          bindings: { TEST_MIGRATIONS: migrations }
+          bindings: {
+            TEST_MIGRATIONS: migrations,
+            HF_API_TOKEN: "hf-test-token"
+          }
         }
       }
     })

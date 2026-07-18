@@ -7,6 +7,7 @@ declare global {
     interface Env {
       DB: D1Database
       AUTH: KVNamespace
+      HF_API_TOKEN: string
       TEST_MIGRATIONS: D1Migration[]
     }
   }

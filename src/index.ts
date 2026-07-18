@@ -1,16 +1,18 @@
 import { normalizeTags, toIsoOrNull, parseArticleRow } from "./lib/normalize"
+import { classifyArticle } from "./lib/classifyMl"
 
 export interface Env {
   DB: D1Database;
   AUTH: KVNamespace;
+  HF_API_TOKEN: string;
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url)
 
     if (request.method === "POST" && url.pathname === "/api/ingest") {
-      return handleDigest(request, env)
+      return handleDigest(request, env, ctx)
     }
 
     if (request.method === "GET" && url.pathname === "/api/articles") {
@@ -34,7 +36,7 @@ export default {
   }
 }
 
-async function handleDigest(request: Request, env: Env): Promise<Response> {
+async function handleDigest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const authHeader = request.headers.get("Authorization")
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response("Non autorisé", { status: 401 })
@@ -64,7 +66,7 @@ async function handleDigest(request: Request, env: Env): Promise<Response> {
     : null
 
   try {
-    await env.DB.prepare(
+    const result = await env.DB.prepare(
       `INSERT OR IGNORE INTO articles
       (titre, url, resume, source, categorie_mistral, score_mistral, themes_mistral, tags, date_article, date_collecte)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -83,6 +85,12 @@ async function handleDigest(request: Request, env: Env): Promise<Response> {
       )
       .run()
 
+    // Classification ML en arrière-plan, seulement pour un article réellement
+    // inséré (pas un doublon ignoré). La réponse 201 part sans attendre HF.
+    if (result.meta.changes > 0) {
+      ctx.waitUntil(classifyAndStoreMl(env, body.title, body.resume || null, body.link))
+    }
+
     return new Response(JSON.stringify({ status: "ok" }), {
       status: 201,
       headers: { "Content-Type": "application/json" },
@@ -92,6 +100,23 @@ async function handleDigest(request: Request, env: Env): Promise<Response> {
       status: 500,
       headers: { "Content-Type": "application/json" },
     })
+  }
+}
+
+// Un échec HF (cold start épuisé, rate limit...) laisse themes_ml à NULL :
+// l'article reste rattrapable par le script de backfill (scripts/classify-ml.mjs).
+async function classifyAndStoreMl(env: Env, titre: string, resume: string | null, url: string): Promise<void> {
+  if (!env.HF_API_TOKEN) {
+    console.warn("HF_API_TOKEN absent : classification ML ignorée")
+    return
+  }
+  try {
+    const { themes, confidence } = await classifyArticle(titre, resume, env.HF_API_TOKEN)
+    await env.DB.prepare("UPDATE articles SET themes_ml = ?, score_confiance_ml = ? WHERE url = ?")
+      .bind(JSON.stringify(themes), confidence, url)
+      .run()
+  } catch (err) {
+    console.error(`Classification ML échouée pour ${url}:`, err)
   }
 }
 
