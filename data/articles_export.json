@@ -4527,6 +4527,240 @@
         "url": "https://www.infoq.com/news/2026/07/durable-document-schema/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=Architecture+%26+Design",
         "themes_mistral": "[\"Architecture\",\"Développement\"]",
         "date_article": "2026-07-14T08:08:00.000Z"
+      },
+      {
+        "id": 657,
+        "titre": "Weekly Update 512: IoT Lockout Fail",
+        "resume": "Cet article de Troy Hunt décrit une vulnérabilité dans les systèmes de verrouillage IoT, qui peut être exploitée pour déverrouiller les portes. Il explique comment cette faille a été découverte et comment elle peut être exploitée.",
+        "source": "Troy Hunt",
+        "url": "https://www.troyhunt.com/weekly-update-512/",
+        "themes_mistral": "[\"Sécurité\",\"IoT\"]",
+        "date_article": "2026-07-15T00:35:38.000Z"
+      },
+      {
+        "id": 662,
+        "titre": "Flipkart and LitmusChaos at KubeCon + CloudNativeCon India 2026: A recap",
+        "resume": "Flipkart a présenté LitmusChaos, un outil de test de résilience pour Kubernetes, lors de KubeCon + CloudNativeCon India 2026. Cet outil permet de simuler des perturbations dans un environnement de production pour tester la résilience des applications.",
+        "source": "CNCF Blog",
+        "url": "https://www.cncf.io/blog/2026/07/17/flipkart-and-litmuschaos-at-kubecon-cloudnativecon-india-2026-a-recap/",
+        "themes_mistral": "[\"DevOps/Infrastructure\",\"Sécurité\",\"Pratiques/Qualité\"]",
+        "date_article": "2026-07-17T11:00:00.000Z"
+      },
+      {
+        "id": 663,
+        "titre": "Running a self-hosted LLM in Kubernetes with vLLM",
+        "resume": "Cet article décrit comment exécuter un grand modèle de langage (LLM) auto-hébergé dans Kubernetes en utilisant vLLM. Il explique comment déployer et gérer un LLM dans un environnement Kubernetes, en mettant l'accent sur l'utilisation de vLLM pour optimiser l'utilisation des ressources.",
+        "source": "CNCF Blog",
+        "url": "https://www.cncf.io/blog/2026/07/16/running-a-self-hosted-llm-in-kubernetes-with-vllm/",
+        "themes_mistral": "[\"DevOps/Infrastructure\",\"IA/ML\"]",
+        "date_article": "2026-07-16T11:00:00.000Z"
+      },
+      {
+        "id": 664,
+        "titre": "HAMi becomes a CNCF incubating project",
+        "resume": "HAMi, un projet open source de gestion de cluster Kubernetes, devient un projet incubé par la Cloud Native Computing Foundation (CNCF). Cette reconnaissance met en avant l'importance croissante de la gestion de cluster dans l'écosystème Kubernetes.",
+        "source": "CNCF Blog",
+        "url": "https://www.cncf.io/blog/2026/07/15/hami-becomes-a-cncf-incubating-project/",
+        "themes_mistral": "[\"DevOps/Infrastructure\",\"Architecture\"]",
+        "date_article": "2026-07-15T16:00:00.000Z"
+      },
+      {
+        "id": 665,
+        "titre": "On-prem DBaaS in 2026: Platforms, standards, and gaps",
+        "resume": "Cet article explore les tendances et les défis de l'utilisation de DBaaS (Database as a Service) sur site d'ici 2026, en mettant l'accent sur les plateformes, les normes et les lacunes dans ce domaine.",
+        "source": "CNCF Blog",
+        "url": "https://www.cncf.io/blog/2026/07/15/on-prem-dbaas-in-2026-platforms-standards-and-gaps/",
+        "themes_mistral": "[\"Architecture\",\"Sécurité\",\"Pratiques/Qualité\"]",
+        "date_article": "2026-07-15T11:00:00.000Z"
+      },
+      {
+        "id": 666,
+        "titre": "KeycloakCon Japan 2026: Navigating cloud native identity and the AI frontier",
+        "resume": "Cet article présente la conférence KeycloakCon Japan 2026, qui se concentre sur l'identité cloud native et l'IA. Il explore comment ces technologies peuvent être utilisées pour améliorer la sécurité et la gestion des identités dans les environnements cloud natifs.",
+        "source": "CNCF Blog",
+        "url": "https://www.cncf.io/blog/2026/07/14/keycloakcon-japan-2026-navigating-cloud-native-identity-and-the-ai-frontier/",
+        "themes_mistral": "[\"Sécurité\",\"Architecture\",\"IA/ML\"]",
+        "date_article": "2026-07-14T21:34:55.000Z"
+      },
+      {
+        "id": 667,
+        "titre": "OWASP CVE Lite CLI Graduates to Lab Project Status",
+        "resume": "L'OWASP CVE Lite CLI passe au statut de projet de laboratoire. Cette annonce marque une étape importante dans le développement de cette outil de gestion des vulnérabilités.",
+        "source": "OWASP",
+        "url": "http://owasp.org/blog/2026/07/06/cve-lite-cli-lab.html",
+        "themes_mistral": "[\"Sécurité\",\"Productivité/Outils\"]",
+        "date_article": "2026-07-06T07:00:00.000Z"
+      },
+      {
+        "id": 672,
+        "titre": "Eclipse Dataspace Components on AWS: Cost optimization strategies",
+        "resume": "Cet article présente des stratégies d'optimisation des coûts pour les composants de l'espace de données Eclipse sur AWS. Il décrit comment utiliser les services AWS pour réduire les coûts tout en maintenant une architecture évolutive et sécurisée.",
+        "source": "AWS Architecture",
+        "url": "https://aws.amazon.com/blogs/architecture/eclipse-dataspace-components-on-aws-cost-optimization-strategies/",
+        "themes_mistral": "[\"Architecture\",\"DevOps/Infrastructure\",\"Sécurité\"]",
+        "date_article": "2026-07-17T16:03:47.000Z"
+      },
+      {
+        "id": 673,
+        "titre": "Eclipse Dataspace Components on AWS: Architecture patterns in production",
+        "resume": "Cet article présente les modèles d'architecture pour utiliser les composants Eclipse Dataspace sur AWS en production. Il décrit comment intégrer ces composants dans des architectures existantes pour gérer les données de manière sécurisée et interopérable.",
+        "source": "AWS Architecture",
+        "url": "https://aws.amazon.com/blogs/architecture/eclipse-dataspace-components-on-aws-architecture-patterns-in-production/",
+        "themes_mistral": "[\"Architecture\",\"Sécurité\",\"Développement\"]",
+        "date_article": "2026-07-17T16:03:44.000Z"
+      },
+      {
+        "id": 674,
+        "titre": "Eclipse Dataspace Components on AWS: Data sharing fundamentals",
+        "resume": "Cet article présente les concepts fondamentaux de partage de données avec Eclipse Dataspace Components sur AWS. Il décrit comment les entreprises peuvent partager des données de manière sécurisée et contrôlée entre différents services et applications.",
+        "source": "AWS Architecture",
+        "url": "https://aws.amazon.com/blogs/architecture/eclipse-dataspace-components-on-aws-data-sharing-fundamentals/",
+        "themes_mistral": "[\"Architecture\",\"Sécurité\"]",
+        "date_article": "2026-07-17T16:03:40.000Z"
+      },
+      {
+        "id": 675,
+        "titre": "Prioritize your AWS Health alerts using AWS User Notifications",
+        "resume": "Cet article décrit comment utiliser AWS User Notifications pour prioriser les alertes de santé AWS, ce qui peut aider les équipes à mieux gérer les incidents critiques.",
+        "source": "AWS Architecture",
+        "url": "https://aws.amazon.com/blogs/architecture/prioritize-your-aws-health-alerts-using-aws-user-notifications/",
+        "themes_mistral": "[\"DevOps/Infrastructure\",\"Sécurité\",\"Productivité/Outils\"]",
+        "date_article": "2026-07-16T14:56:22.000Z"
+      },
+      {
+        "id": 676,
+        "titre": "How bitdrift scaled to 121 million concurrent gRPC connections on Amazon CloudFront for live telemetry sporting events",
+        "resume": "L'article décrit comment bitdrift a réussi à gérer 121 millions de connexions gRPC simultanées sur Amazon CloudFront pour des événements sportifs en direct. Il met en avant l'utilisation de l'architecture serverless et de la mise en cache pour gérer une telle charge.",
+        "source": "AWS Architecture",
+        "url": "https://aws.amazon.com/blogs/architecture/how-bitdrift-scaled-to-121-million-concurrent-grpc-connections-on-amazon-cloudfront-for-live-telemetry-sporting-events/",
+        "themes_mistral": "[\"Architecture\",\"DevOps/Infrastructure\"]",
+        "date_article": "2026-07-15T15:27:47.000Z"
+      },
+      {
+        "id": 677,
+        "titre": "The Real App-Building Kit for Non-Technical Founders: Trustworthy AI-Powered Development",
+        "resume": "Cet article présente une solution d'application de développement basée sur l'IA pour les fondateurs non techniques. Elle permet de créer des applications sans connaissances techniques.",
+        "source": "dev.to",
+        "url": "https://dev.to/davekurian/the-real-app-building-kit-for-non-technical-founders-trustworthy-ai-powered-development-2jl8",
+        "themes_mistral": "[\"IA/ML\",\"Développement\"]",
+        "date_article": "2026-07-18T13:05:49.000Z"
+      },
+      {
+        "id": 678,
+        "titre": "Lucy 2.5 Real-Time AI Video Editing: Decart's 40ms Live Stream Revolution",
+        "resume": "L'article présente Lucy 2.5, une technologie de montage vidéo en temps réel basée sur l'IA, capable de traiter des flux en direct avec un délai de 40 ms. Cette innovation permet une édition vidéo en temps réel, offrant de nouvelles possibilités pour les diffuseurs en direct.",
+        "source": "dev.to",
+        "url": "https://dev.to/khuram_youraj_6c4b6780ae1/lucy-25-real-time-ai-video-editing-decarts-40ms-live-stream-revolution-1agl",
+        "themes_mistral": "[\"IA/ML\",\"Productivité/Outils\"]",
+        "date_article": "2026-07-18T13:01:38.000Z"
+      },
+      {
+        "id": 679,
+        "titre": "Why I built a SQL client when 10 already exist — then let AI agents into it",
+        "resume": "L'auteur explique pourquoi il a créé un client SQL alors qu'il en existe déjà 10, et comment il a intégré des agents AI dans son outil.",
+        "source": "dev.to",
+        "url": "https://dev.to/gillarohith/why-i-built-a-sql-client-when-10-already-exist-then-let-ai-agents-into-it-4kk4",
+        "themes_mistral": "[\"Développement\",\"Pratiques/Qualité\"]",
+        "date_article": "2026-07-18T12:59:03.000Z"
+      },
+      {
+        "id": 680,
+        "titre": "A cut list is not a cut plan: audit kerf and stock assignments with KerfPlan",
+        "resume": "Cet article technique explique l'importance de différencier une liste de coupes d'une planification de coupes lors de la fabrication de pièces en bois. Il présente KerfPlan, un outil qui aide à auditer les assignations de coupe et de matière première.",
+        "source": "dev.to",
+        "url": "https://dev.to/nekoautomata/a-cut-list-is-not-a-cut-plan-audit-kerf-and-stock-assignments-with-kerfplan-2kgc",
+        "themes_mistral": "[\"Architecture\",\"Productivité/Outils\"]",
+        "date_article": "2026-07-18T12:58:28.000Z"
+      },
+      {
+        "id": 681,
+        "titre": "Argo - LLM-native static vulnerability detection",
+        "resume": "Argo est une solution de détection de vulnérabilité statique native pour les modèles de langage. Elle permet de détecter les vulnérabilités dans les modèles de langage en utilisant des techniques de détection de vulnérabilité statique.",
+        "source": "dev.to",
+        "url": "https://dev.to/mr_limitless_abe15f71d2fe/argo-llm-native-static-vulnerability-detection-4k9a",
+        "themes_mistral": "[\"Sécurité\",\"IA/ML\"]",
+        "date_article": "2026-07-18T12:57:48.000Z"
+      },
+      {
+        "id": 682,
+        "titre": "The Archaeologist’s Copilot",
+        "resume": "L'article décrit comment l'intelligence artificielle peut être utilisée pour aider les archéologues à analyser des données et à faire des découvertes. Il met en avant l'importance de la collaboration entre les experts en technologie et les archéologues pour exploiter au mieux les possibilités offertes par l'IA.",
+        "source": "Martin Fowler",
+        "url": "https://martinfowler.com/articles/archaeologist-copilot.html",
+        "themes_mistral": "[\"IA/ML\",\"Pratiques/Qualité\"]",
+        "date_article": "2026-07-16T13:25:00.000Z"
+      },
+      {
+        "id": 687,
+        "titre": "Developers who move fast still need to do it together​​​​‌﻿‍﻿​‍​‍‌‍﻿﻿‌﻿​‍‌‍‍‌‌‍‌﻿‌‍‍‌‌‍﻿‍​‍​‍​﻿‍‍​‍​‍‌﻿​﻿‌‍​‌‌‍﻿‍‌‍‍‌‌﻿‌​‌﻿‍‌​‍﻿‍‌‍‍‌‌‍﻿﻿​‍​‍​‍﻿​​‍​‍‌‍‍​‌﻿​‍‌‍‌‌‌‍‌‍​‍​‍​﻿‍‍​‍​‍‌‍‍​‌﻿‌​‌﻿‌​‌﻿​​‌﻿​﻿​﻿‍‍​‍﻿﻿​‍﻿﻿‌‍​﻿‌‍﻿‌‌﻿​﻿​‍﻿‍‌﻿​﻿‌﻿‌​‌‍​‌‌‍​﻿‌‍‍﻿‌‍﻿﻿‌﻿‌‍‌‍‌‌‌﻿​‍‌‍‌‍‌‍﻿​‌‍﻿﻿‌﻿‌﻿​‍﻿‍‌‍​﻿‌‍﻿﻿​‍﻿﻿‌‍‍‌‌‍﻿‍‌﻿‌​‌‍‌‌‌‍﻿‍‌﻿‌​​‍﻿﻿‌‍‌‌‌‍‌​‌‍‍‌‌﻿‌​​‍﻿﻿‌‍﻿‌‌‍﻿﻿‌‍‌​‌‍‌‌​﻿﻿‌‌﻿​​‌﻿​‍‌‍‌‌‌﻿​﻿‌‍‌‌‌‍﻿‍‌﻿‌​‌‍​‌‌﻿‌​‌‍‍‌‌‍﻿﻿‌‍﻿‍​﻿‍﻿‌‍‍‌‌‍‌​​﻿﻿‌​﻿‍​​﻿‍​‌‍‌‍​﻿‌‌​﻿​‍‌‍‌​​﻿‌﻿‌‍​‍​‍﻿‌‌‍‌‌‌‍‌​​﻿​﻿​﻿‌‌​‍﻿‌​﻿‌​‌‍‌​​﻿​‍​﻿​﻿​‍﻿‌​﻿‍‌​﻿​​​﻿‌​‌‍‌‌​‍﻿‌‌‍‌‌​﻿​‌‌‍​﻿​﻿​﻿​﻿​​​﻿‌‍​﻿‍​​﻿‌‌​﻿​‍‌‍‌‌​﻿‌﻿​﻿‌﻿​﻿‍﻿‌﻿‌​‌﻿‍‌‌﻿​​‌‍‌‌​﻿﻿‌‌‍​‍‌‍﻿​‌‍﻿﻿‌‍‌﻿‌‌​​‌‍﻿﻿‌﻿​﻿‌﻿‌​​﻿‍﻿‌﻿​​‌‍​‌‌﻿‌​‌‍‍​​﻿﻿‌‌﻿‌​‌‍‍‌‌﻿‌​‌‍﻿​‌‍‌‌​﻿﻿﻿‌‍​‍‌‍​‌‌﻿​﻿‌‍‌‌‌‌‌‌‌﻿​‍‌‍﻿​​﻿﻿‌‌‍‍​‌﻿‌​‌﻿‌​‌﻿​​‌﻿​﻿​‍‌‌​﻿​﻿‌​​‌​‍‌‌​﻿​‍‌​‌‍​‍‌‌​﻿​‍‌​‌‍‌‍​﻿‌‍﻿‌‌﻿​﻿​‍﻿‍‌﻿​﻿‌﻿‌​‌‍​‌‌‍​﻿‌‍‍﻿‌‍﻿﻿‌﻿‌‍‌‍‌‌‌﻿​‍‌‍‌‍‌‍﻿​‌‍﻿﻿‌﻿‌﻿​‍﻿‍‌‍​﻿‌‍﻿﻿​‍‌‍‌‍‍‌‌‍‌​​﻿﻿‌​﻿‍​​﻿‍​‌‍‌‍​﻿‌‌​﻿​‍‌‍‌​​﻿‌﻿‌‍​‍​‍﻿‌‌‍‌‌‌‍‌​​﻿​﻿​﻿‌‌​‍﻿‌​﻿‌​‌‍‌​​﻿​‍​﻿​﻿​‍﻿‌​﻿‍‌​﻿​​​﻿‌​‌‍‌‌​‍﻿‌‌‍‌‌​﻿​‌‌‍​﻿​﻿​﻿​﻿​​​﻿‌‍​﻿‍​​﻿‌‌​﻿​‍‌‍‌‌​﻿‌﻿​﻿‌﻿​‍‌‍‌﻿‌​‌﻿‍‌‌﻿​​‌‍‌‌​﻿﻿‌‌‍​‍‌‍﻿​‌‍﻿﻿‌‍‌﻿‌‌​​‌‍﻿﻿‌﻿​﻿‌﻿‌​​‍‌‍‌﻿​​‌‍​‌‌﻿‌​‌‍‍​​﻿﻿‌‌﻿‌​‌‍‍‌‌﻿‌​‌‍﻿​‌‍‌‌​‍‌‍‌﻿​​‌‍‌‌‌﻿​‍‌﻿​﻿‌﻿​​‌‍‌‌‌‍​﻿‌﻿‌​‌‍‍‌‌﻿‌‍‌‍‌‌​﻿﻿‌‌﻿​​‌﻿‌‌‌‍​‍‌‍﻿​‌‍‍‌‌﻿​﻿‌‍‍​‌‍‌‌‌‍‌​​‍​‍‌﻿﻿‌",
+        "resume": "L'article met en avant l'importance de travailler ensemble en tant que développeurs pour aller vite tout en maintenant une qualité de travail élevée.",
+        "source": "StackOverflow Blog",
+        "url": "https://stackoverflow.blog/2026/07/17/devs-who-move-fast-still-need-to-do-it-together/",
+        "themes_mistral": "[\"Développement\",\"Pratiques/Qualité\"]",
+        "date_article": "2026-07-17T07:40:00.000Z"
+      },
+      {
+        "id": 692,
+        "titre": "AWS Continuum to Enable Agentic Code Security for Enterprises",
+        "resume": "L'article décrit comment AWS Continuum permet de sécuriser le code de manière autonome pour les entreprises. Il met en avant l'importance de la sécurité du code et comment AWS Continuum peut aider à la mettre en place de manière efficace.",
+        "source": "InfoQ Architecture",
+        "url": "https://www.infoq.com/news/2026/07/aws-continuum-code-security/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=Architecture+%26+Design",
+        "themes_mistral": "[\"Sécurité\",\"Architecture\"]",
+        "date_article": "2026-07-16T19:00:00.000Z"
+      },
+      {
+        "id": 693,
+        "titre": "Presentation: The Rust High Performance Talk You Did Not Expect",
+        "resume": "Cet article présente une conférence sur Rust, un langage de programmation performant et sûr. Il aborde les avantages de Rust pour le développement de logiciels de haute performance et sa capacité à prévenir les erreurs de programmation courantes.",
+        "source": "InfoQ Architecture",
+        "url": "https://www.infoq.com/presentations/rust-tps-service/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=Architecture+%26+Design",
+        "themes_mistral": "[\"Développement\",\"Architecture\"]",
+        "date_article": "2026-07-16T10:20:00.000Z"
+      },
+      {
+        "id": 694,
+        "titre": "AI Agents with Cloud Credentials Are Outrunning Billing Guardrails Built for Human-Speed Mistakes",
+        "resume": "Cet article traite de l'utilisation d'agents AI avec des identifiants cloud qui dépassent les garde-fous de facturation conçus pour les erreurs humaines. Il met en évidence les risques de surcoûts associés à l'utilisation d'agents AI autonomes et souligne l'importance de mettre en place des contrôles appropriés pour éviter ces problèmes.",
+        "source": "InfoQ Architecture",
+        "url": "https://www.infoq.com/news/2026/07/ai-agents-billing-guardrails/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=Architecture+%26+Design",
+        "themes_mistral": "[\"IA/ML\",\"Sécurité\",\"Architecture\"]",
+        "date_article": "2026-07-16T10:17:00.000Z"
+      },
+      {
+        "id": 695,
+        "titre": "Stripe Benchmark Shows AI Agents Build Integrations but Struggle with Validation",
+        "resume": "L'article de Stripe démontre que les agents AI sont capables de construire des intégrations, mais ont des difficultés avec la validation. Cela soulève des questions sur la fiabilité et la sécurité des intégrations automatisées.",
+        "source": "InfoQ Architecture",
+        "url": "https://www.infoq.com/news/2026/07/stripe-ai-agents-benchmark/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=Architecture+%26+Design",
+        "themes_mistral": "[\"IA/ML\",\"Sécurité\",\"Pratiques/Qualité\"]",
+        "date_article": "2026-07-15T14:25:00.000Z"
+      },
+      {
+        "id": 696,
+        "titre": "AWS Ships Claude Apps Gateway as Self-Hosted Control Plane for Claude Code and Claude Desktop",
+        "resume": "AWS lance Claude Apps Gateway, un contrôleur auto-hébergé pour Claude Code et Claude Desktop, permettant aux développeurs de créer et de gérer des applications à partir de modèles de langage avancés.",
+        "source": "InfoQ Architecture",
+        "url": "https://www.infoq.com/news/2026/07/claude-apps-gateway-aws/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=Architecture+%26+Design",
+        "themes_mistral": "[\"DevOps/Infrastructure\",\"Développement\",\"IA/ML\"]",
+        "date_article": "2026-07-15T11:04:00.000Z"
+      },
+      {
+        "id": 697,
+        "titre": "The cost of saying yes has changed",
+        "resume": "L'article aborde l'impact des coûts cachés dans le développement de logiciels et comment dire 'non' peut être bénéfique pour l'entreprise.",
+        "source": "GitHub Blog",
+        "url": "https://github.blog/engineering/the-cost-of-saying-yes-has-changed/",
+        "themes_mistral": "[\"Développement\",\"Pratiques/Qualité\"]",
+        "date_article": "2026-07-17T16:46:47.000Z"
+      },
+      {
+        "id": 698,
+        "titre": "GitHub for Beginners: Your roadmap to mastering the GitHub essentials",
+        "resume": "Cet article du blog de GitHub est un guide pour les débutants qui cherchent à maîtriser les essentiels de GitHub. Il fournit une introduction aux concepts clés et aux fonctionnalités de GitHub, ce qui en fait une ressource utile pour les développeurs qui cherchent à améliorer leurs compétences en matière de gestion de version.",
+        "source": "GitHub Blog",
+        "url": "https://github.blog/developer-skills/github/github-for-beginners-your-roadmap-to-mastering-the-github-essentials/",
+        "themes_mistral": "[\"Développement\",\"Pratiques/Qualité\"]",
+        "date_article": "2026-07-15T17:29:31.000Z"
       }
     ],
     "success": true,
@@ -4536,14 +4770,14 @@
       "served_by_colo": "CDG",
       "served_by_primary": true,
       "timings": {
-        "sql_duration_ms": 6.3666
+        "sql_duration_ms": 7.3209
       },
-      "duration": 6.3666,
+      "duration": 7.3209,
       "changes": 0,
       "last_row_id": 0,
       "changed_db": false,
-      "size_after": 544768,
-      "rows_read": 503,
+      "size_after": 610304,
+      "rows_read": 529,
       "rows_written": 0,
       "total_attempts": 1
     }
