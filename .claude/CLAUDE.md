@@ -44,14 +44,14 @@ Le repo est **CommonJS** → tout nouveau script Node va en `.mjs` (ESM explicit
 ```bash
 pnpm typecheck        # tsc --noEmit
 pnpm lint             # eslint
-pnpm test             # vitest run (40 tests)
+pnpm test             # vitest run (73 tests)
 npx wrangler deploy   # déploiement manuel (normalement fait par la CI)
 npx wrangler tail veille-analytics   # logs prod — outil de diagnostic n°1
 ```
 
 ## Structure
 
-- `src/index.ts` — routage manuel (`url.pathname`), 6 routes
+- `src/index.ts` — routage manuel (`url.pathname`), 7 routes
 - `src/lib/normalize.ts` — normalisation pure (tags, dates RFC 822 → ISO), testée unitairement
 - `src/lib/classifyMl.ts` — appel HF Inference API, mapping, retry borné
 - `src/lib/mlComparison.ts` — calcul de concordance Mistral/ML (fonction pure)
@@ -72,6 +72,7 @@ GET  /api/stats/themes
 GET  /api/stats/sources
 GET  /api/stats/timeline
 GET  /api/stats/ml-comparison
+GET  /api/stats/health        fraîcheur de la collecte + état de la classification (ADR D12)
 ```
 
 Pas de CORS configuré : le dashboard passe par un proxy Nitro, tous les appels sont same-origin.
