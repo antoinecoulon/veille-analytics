@@ -2,6 +2,7 @@ import { normalizeTags, toIsoOrNull, parseArticleRow } from "./lib/normalize"
 import { classifyArticle } from "./lib/classifyMl"
 import { computeMlComparison, type MlComparisonRow } from "./lib/mlComparison"
 import { refreshAggregatesForDay } from "./lib/aggregates"
+import { computeHealth, seuilRetardMl, type HealthRow } from "./lib/health"
 
 export interface Env {
   DB: D1Database;
@@ -36,6 +37,10 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/api/stats/ml-comparison") {
       return fetchMlComparison(env)
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/stats/health") {
+      return fetchHealth(env)
     }
     
     return new Response("VeilleAnalytics API - OK");
@@ -260,6 +265,42 @@ async function fetchMlComparison(env: Env): Promise<Response> {
     .all<MlComparisonRow>()
 
   return Response.json({ data: computeMlComparison(results) })
+}
+
+// Santé du pipeline (P3 — C33/C24). Un seul aller-retour D1 : les compteurs sont des
+// sous-SELECT d'une même requête. Le jugement (seuils, statuts) est délégué à computeHealth,
+// fonction pure testable sans D1 — cf. src/lib/health.ts et ADR D12.
+//
+// ⚠️ Ces comptages sont dupliqués dans scripts/health-check.sql (version exploitation, à
+// lancer en --remote pour recouper l'endpoint). Toute évolution va aux deux endroits.
+async function fetchHealth(env: Env): Promise<Response> {
+  const now = new Date()
+
+  const row = await env.DB.prepare(
+    `SELECT
+       (SELECT MAX(date_collecte) FROM articles) AS derniere_ingestion,
+       (SELECT COUNT(*) FROM articles) AS total,
+       (SELECT COUNT(*) FROM articles
+         WHERE themes_ml IS NULL AND date_collecte < ?1) AS ml_en_retard,
+       (SELECT COUNT(*) FROM articles WHERE themes_ml = '[]') AS ml_sans_theme,
+       (SELECT COUNT(*) FROM articles WHERE themes_mistral IS NULL) AS mistral_manquants`
+  )
+    // Le seuil des 24 h est calculé en TS et passé en paramètre plutôt qu'écrit en julianday :
+    // la constante ML_RETARD_HEURES reste ainsi l'unique source de vérité.
+    .bind(seuilRetardMl(now))
+    .first<HealthRow>()
+
+  // .first() ne renvoie null que si la requête ne produit aucune ligne ; ici les sous-SELECT
+  // agrégés en produisent toujours une, même base vide. Repli défensif malgré tout.
+  const compteurs: HealthRow = row ?? {
+    derniere_ingestion: null,
+    total: 0,
+    ml_en_retard: 0,
+    ml_sans_theme: 0,
+    mistral_manquants: 0
+  }
+
+  return Response.json({ data: computeHealth(compteurs, now) })
 }
 
 // Lecture de l'agrégat pré-calculé (lignes de rollup, thematique NULL) au lieu d'un
