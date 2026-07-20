@@ -24,7 +24,7 @@ function ilYA(jours: number): string {
 
 function row(over: Partial<HealthRow> = {}): HealthRow {
   return {
-    derniere_ingestion: ilYA(0),
+    dernier_article_collecte: ilYA(0),
     total: 10,
     ml_en_retard: 0,
     ml_sans_theme: 0,
@@ -41,45 +41,45 @@ describe("computeHealth — fraîcheur de la collecte", () => {
   })
 
   it("borne haute de ok : exactement 3 jours reste ok", () => {
-    const out = computeHealth(row({ derniere_ingestion: ilYA(FRAICHEUR_OK_JOURS) }), NOW)
+    const out = computeHealth(row({ dernier_article_collecte: ilYA(FRAICHEUR_OK_JOURS) }), NOW)
     expect(out.collecte).toMatchObject({ jours_depuis: 3, statut: "ok" })
   })
 
   it("premier jour dégradé : 4 jours bascule en degrade", () => {
-    const out = computeHealth(row({ derniere_ingestion: ilYA(FRAICHEUR_OK_JOURS + 1) }), NOW)
+    const out = computeHealth(row({ dernier_article_collecte: ilYA(FRAICHEUR_OK_JOURS + 1) }), NOW)
     expect(out.collecte).toMatchObject({ jours_depuis: 4, statut: "degrade" })
     expect(out.statut).toBe("degrade")
   })
 
   it("borne haute de degrade : exactement 14 jours reste degrade", () => {
-    const out = computeHealth(row({ derniere_ingestion: ilYA(FRAICHEUR_ALERTE_JOURS) }), NOW)
+    const out = computeHealth(row({ dernier_article_collecte: ilYA(FRAICHEUR_ALERTE_JOURS) }), NOW)
     expect(out.collecte).toMatchObject({ jours_depuis: 14, statut: "degrade" })
   })
 
   it("premier jour d'alerte : 15 jours bascule en alerte", () => {
-    const out = computeHealth(row({ derniere_ingestion: ilYA(FRAICHEUR_ALERTE_JOURS + 1) }), NOW)
+    const out = computeHealth(row({ dernier_article_collecte: ilYA(FRAICHEUR_ALERTE_JOURS + 1) }), NOW)
     expect(out.collecte).toMatchObject({ jours_depuis: 15, statut: "alerte" })
     expect(out.statut).toBe("alerte")
   })
 
   it("l'interruption réelle de 67 jours (mai 2026) serait bien en alerte", () => {
-    const out = computeHealth(row({ derniere_ingestion: ilYA(67) }), NOW)
+    const out = computeHealth(row({ dernier_article_collecte: ilYA(67) }), NOW)
     expect(out.collecte).toMatchObject({ jours_depuis: 67, statut: "alerte" })
   })
 
   it("base vide : aucune ingestion connue est une alerte, pas un état neutre", () => {
-    const out = computeHealth(row({ derniere_ingestion: null, total: 0 }), NOW)
-    expect(out.collecte).toMatchObject({ derniere_ingestion: null, jours_depuis: null, statut: "alerte" })
+    const out = computeHealth(row({ dernier_article_collecte: null, total: 0 }), NOW)
+    expect(out.collecte).toMatchObject({ dernier_article_collecte: null, jours_depuis: null, statut: "alerte" })
     expect(out.statut).toBe("alerte")
   })
 
   it("date illisible : traitée comme une absence d'ingestion", () => {
-    const out = computeHealth(row({ derniere_ingestion: "pas-une-date" }), NOW)
+    const out = computeHealth(row({ dernier_article_collecte: "pas-une-date" }), NOW)
     expect(out.collecte).toMatchObject({ jours_depuis: null, statut: "alerte" })
   })
 
   it("date légèrement dans le futur : plancher à 0 jour, pas de valeur négative", () => {
-    const out = computeHealth(row({ derniere_ingestion: ilYA(-1) }), NOW)
+    const out = computeHealth(row({ dernier_article_collecte: ilYA(-1) }), NOW)
     expect(out.collecte).toMatchObject({ jours_depuis: 0, statut: "ok" })
   })
 })
@@ -125,14 +125,14 @@ describe("computeHealth — classification", () => {
 describe("computeHealth — statut global", () => {
   it("retient le pire des deux sous-statuts", () => {
     // Collecte dégradée + classification en alerte -> alerte.
-    const out = computeHealth(row({ derniere_ingestion: ilYA(5), ml_en_retard: 3 }), NOW)
+    const out = computeHealth(row({ dernier_article_collecte: ilYA(5), ml_en_retard: 3 }), NOW)
     expect(out.collecte.statut).toBe("degrade")
     expect(out.classification.statut).toBe("alerte")
     expect(out.statut).toBe("alerte")
   })
 
   it("une collecte en alerte l'emporte sur une classification saine", () => {
-    const out = computeHealth(row({ derniere_ingestion: ilYA(30) }), NOW)
+    const out = computeHealth(row({ dernier_article_collecte: ilYA(30) }), NOW)
     expect(out.classification.statut).toBe("ok")
     expect(out.statut).toBe("alerte")
   })
@@ -214,7 +214,7 @@ describe("GET /api/stats/health", () => {
   it("base vide : alerte, aucune ingestion connue", async () => {
     const out = await health()
     expect(out.statut).toBe("alerte")
-    expect(out.collecte).toMatchObject({ derniere_ingestion: null, jours_depuis: null })
+    expect(out.collecte).toMatchObject({ dernier_article_collecte: null, jours_depuis: null })
     expect(out.classification).toMatchObject({ total: 0, ml_en_retard: 0, ml_sans_theme: 0 })
   })
 
@@ -255,7 +255,7 @@ describe("GET /api/stats/health", () => {
     expect(out.classification).toMatchObject({ mistral_manquants: 1, statut: "ok" })
   })
 
-  it("derniere_ingestion vaut bien MAX(date_collecte)", async () => {
+  it("dernier_article_collecte vaut bien MAX(date_collecte)", async () => {
     await ingest({ title: "A", link: "https://x/a", date: "2026-07-20" })
     await ingest({ title: "B", link: "https://x/b", date: "2026-07-20" })
     await vieillir("https://x/a", 10)
@@ -264,7 +264,7 @@ describe("GET /api/stats/health", () => {
       m: string
     }>()
     const out = await health()
-    expect(out.collecte.derniere_ingestion).toBe(attendu?.m)
+    expect(out.collecte.dernier_article_collecte).toBe(attendu?.m)
     // Le plus récent des deux articles est de l'instant : la collecte reste fraîche.
     expect(out.collecte.statut).toBe("ok")
   })

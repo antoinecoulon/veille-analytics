@@ -278,7 +278,7 @@ async function fetchHealth(env: Env): Promise<Response> {
 
   const row = await env.DB.prepare(
     `SELECT
-       (SELECT MAX(date_collecte) FROM articles) AS derniere_ingestion,
+       (SELECT MAX(date_collecte) FROM articles) AS dernier_article_collecte,
        (SELECT COUNT(*) FROM articles) AS total,
        (SELECT COUNT(*) FROM articles
          WHERE themes_ml IS NULL AND date_collecte < ?1) AS ml_en_retard,
@@ -293,7 +293,7 @@ async function fetchHealth(env: Env): Promise<Response> {
   // .first() ne renvoie null que si la requête ne produit aucune ligne ; ici les sous-SELECT
   // agrégés en produisent toujours une, même base vide. Repli défensif malgré tout.
   const compteurs: HealthRow = row ?? {
-    derniere_ingestion: null,
+    dernier_article_collecte: null,
     total: 0,
     ml_en_retard: 0,
     ml_sans_theme: 0,
