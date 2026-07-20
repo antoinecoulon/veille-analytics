@@ -229,6 +229,18 @@ La compétence C29 demande l'utilisation de technologies telles que Hadoop/Spark
 
 ## Mapping compétences EADL
 
+> ⚠️ **Ce tableau exprime l'intention de départ (mars-avril 2026), pas l'état final.** Plusieurs de
+> ses lignes se sont révélées inexactes à l'usage : le CORS annoncé en C25 n'a jamais été mis en
+> place (contourné par le patron BFF, mais une authentification complète non prévue a été livrée) ;
+> les tables `dim_date` et `agg_quotidien` sur lesquelles repose C27 sont créées mais jamais
+> alimentées ni lues ; les « logs de prédictions » de C33 n'existent pas.
+>
+> L'état des lieux à jour, avec un verdict et une preuve rejouable par compétence, est dans
+> [`preparation-titre-eadl/m3/03-couverture-competences.md`](https://github.com/antoinecoulon/preparation-titre-eadl/blob/main/m3/03-couverture-competences.md).
+>
+> Ce tableau est **conservé tel quel volontairement** : l'écart entre l'intention et le réalisé est
+> lui-même du matériau d'amélioration continue pour le M3.2.
+
 ### Bloc 4 — Cloud Computing
 
 | Compétence | Comment le projet la couvre |
