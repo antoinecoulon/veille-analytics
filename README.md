@@ -83,6 +83,34 @@ npx wrangler d1 create veille-analytics
 npx wrangler d1 migrations apply veille-analytics --remote
 ```
 
+### Agrégat décisionnel (`dim_date` + `agg_quotidien`)
+
+Le schéma est en étoile : `articles` est la table de faits, `dim_date` la dimension calendaire et
+`agg_quotidien` l'agrégat pré-calculé par jour et par thématique. L'agrégat est **maintenu à
+l'écriture** — chaque ingestion recalcule le jour concerné — et lu par `GET /api/stats/timeline`
+(cf. ADR D11).
+
+Chaque jour porte, en plus de ses lignes par thème, une **ligne de rollup** (`thematique IS NULL`)
+avec le total : sommer les lignes par thème double-compterait les articles multi-thèmes.
+
+Reconstruction complète, idempotente, à lancer si un rafraîchissement a échoué ou après une
+modification en masse des faits :
+
+```bash
+npx wrangler d1 execute veille-analytics --remote --file scripts/rebuild-aggregates.sql
+```
+
+Contrôle croisé — doit renvoyer **zéro ligne**, l'agrégat et le calcul à la volée devant concorder :
+
+```sql
+SELECT a.date, a.nb_articles, v.count
+FROM (SELECT date, nb_articles FROM agg_quotidien WHERE thematique IS NULL) a
+JOIN (SELECT strftime('%Y-%m-%d', date_article) AS jour, COUNT(*) AS count
+      FROM articles WHERE date_article IS NOT NULL GROUP BY jour) v
+  ON a.date = v.jour
+WHERE a.nb_articles <> v.count;
+```
+
 ### Annotation manuelle (jeu de validation — Étape 12)
 
 Construit un jeu de validation indépendant (~100 articles annotés à la main) pour évaluer plus
