@@ -11,10 +11,18 @@
 // qui couvre aussi la route en intégration).
 //
 // ⚠️ Le SQL de comptage est dupliqué dans scripts/health-check.sql (version exploitation).
-// Même convention de commentaire croisé que aggregates.ts / rebuild-aggregates.sql.
+// Même convention de commentaire croisé que aggregates.ts / rebuild-aggregates.sql. Les deux
+// versions ne comptent d'ailleurs pas de la même façon — ici une comparaison de chaînes ISO
+// (date_collecte < seuilRetardMl(now)), là-bas de l'arithmétique julianday. Elles ne coïncident
+// que si tout date_collecte a exactement la forme d'un toISOString() : condition mesurée en prod
+// le 2026-07-20 (0 écart sur 529 articles) plutôt que supposée, cf. l'en-tête du script.
 
 /**
- * Seuils de fraîcheur de la collecte, en jours écoulés depuis la dernière ingestion réussie.
+ * Seuils de fraîcheur de la collecte, en jours écoulés depuis le dernier article collecté.
+ *
+ * Le repère est bien le dernier article **inséré**, pas la dernière passe de collecte : le
+ * pipeline ne journalise pas ses passes, et une passe qui ne ramène que des doublons n'écrit
+ * rien (`INSERT OR IGNORE`). Cf. la limite énoncée par l'ADR D12.
  *
  * Ancrés sur le **meilleur régime réellement atteint**, pas sur le régime observé aujourd'hui :
  * calibrer l'alarme sur la dérive constatée (moyenne 12,5 j sur l'ère D1) reviendrait à
@@ -38,7 +46,7 @@ export type Statut = "ok" | "degrade" | "alerte"
 
 /** Compteurs bruts renvoyés par la requête SQL. */
 export interface HealthRow {
-  derniere_ingestion: string | null
+  dernier_article_collecte: string | null
   total: number
   ml_en_retard: number
   ml_sans_theme: number
@@ -48,7 +56,7 @@ export interface HealthRow {
 export interface PipelineHealth {
   statut: Statut
   collecte: {
-    derniere_ingestion: string | null
+    dernier_article_collecte: string | null
     jours_depuis: number | null
     statut: Statut
   }
@@ -82,9 +90,9 @@ function joursDepuis(iso: string | null, now: Date): number | null {
 }
 
 export function computeHealth(row: HealthRow, now: Date): PipelineHealth {
-  const jours = joursDepuis(row.derniere_ingestion, now)
+  const jours = joursDepuis(row.dernier_article_collecte, now)
 
-  // Aucune ingestion connue = le pipeline n'a jamais tourné (ou date illisible) : c'est une
+  // Aucun article connu = le pipeline n'a jamais rien collecté (ou date illisible) : c'est une
   // alerte, pas un état neutre.
   let statutCollecte: Statut
   if (jours === null) statutCollecte = "alerte"
@@ -101,12 +109,19 @@ export function computeHealth(row: HealthRow, now: Date): PipelineHealth {
   //
   // mistral_manquants (2 en prod) est un résidu historique figé de la migration initiale,
   // pas un dysfonctionnement courant : exposé pour la même raison, neutre pour la même raison.
+  //
+  // ⚠️ Asymétrie assumée : le raisonnement « ne pas rendre l'indicateur définitivement rouge »
+  // qui neutralise ces deux compteurs ne s'applique PAS à ml_en_retard, qui n'offre aucun moyen
+  // d'acquitter un article définitivement non classifiable. Un seul contenu que Hugging Face
+  // refuserait durablement épinglerait le statut à `alerte` sans recours. Le cas ne se manifeste
+  // pas (0 en prod, backfill 503/503) et l'acquittement supposerait une migration ; limite
+  // énoncée dans l'ADR D12 plutôt que couverte.
   const statutClassification: Statut = row.ml_en_retard > 0 ? "alerte" : "ok"
 
   return {
     statut: pire(statutCollecte, statutClassification),
     collecte: {
-      derniere_ingestion: row.derniere_ingestion,
+      dernier_article_collecte: row.dernier_article_collecte,
       jours_depuis: jours,
       statut: statutCollecte
     },

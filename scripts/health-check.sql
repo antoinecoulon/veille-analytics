@@ -4,6 +4,24 @@
 -- recouper l'endpoint (les compteurs doivent coïncider exactement) et à diagnostiquer quand
 -- le Worker lui-même est en cause.
 --
+-- ⚠️ CONDITION DE L'ÉQUIVALENCE — les deux implémentations ne comptent pas de la même façon :
+-- l'endpoint compare des chaînes ISO (`date_collecte < ?1`, seuil produit par toISOString()),
+-- ce SQL fait de l'arithmétique julianday. Elles ne coïncident que si tout `date_collecte` a
+-- exactement la forme rendue par toISOString() — ce que les lignes migrées depuis `analyzedAt`
+-- (scripts/migrate.js:21) ne garantissaient pas a priori. Mesuré plutôt que supposé, en prod le
+-- 2026-07-20 : **0 écart sur 529 articles** (aucune NULL, aucune non analysable par julianday,
+-- aucune hors gabarit `____-__-__T__:__:__.___Z`, aucune dont l'aller-retour
+-- strftime('%Y-%m-%dT%H:%M:%fZ') diffère). Requête de contrôle, à rejouer si un doute survient :
+--
+--   SELECT COUNT(*) AS total,
+--          SUM(CASE WHEN date_collecte IS NULL THEN 1 ELSE 0 END) AS nulles,
+--          SUM(CASE WHEN julianday(date_collecte) IS NULL THEN 1 ELSE 0 END) AS non_parsables,
+--          SUM(CASE WHEN date_collecte IS strftime('%Y-%m-%dT%H:%M:%fZ', date_collecte)
+--                   THEN 0 ELSE 1 END) AS hors_format
+--   FROM articles;
+--
+-- Toute source d'écriture nouvelle qui ne passerait pas par toISOString() romprait la condition.
+--
 -- ⚠️ DUPLICATION ASSUMÉE : la vérité vit dans src/lib/health.ts (compteurs) et dans les
 -- constantes FRAICHEUR_OK_JOURS / FRAICHEUR_ALERTE_JOURS / ML_RETARD_HEURES (seuils). Ce
 -- fichier les recopie parce qu'un `.sql` ne peut pas importer un `.ts`. Toute évolution des
@@ -26,8 +44,12 @@
 -- LECTURE SEULE : `changed_db: false`, `rows_written: 0` à chaque exécution.
 --
 -- Lecture des colonnes :
---   derniere_ingestion  MAX(date_collecte) — la dernière passe de collecte réussie.
---   jours_depuis        Âge de cette passe. Seuils : ok <= 3, degrade 4-14, alerte > 14.
+--   dernier_article_collecte
+--                       MAX(date_collecte) — le dernier article réellement inséré, et non la
+--                       dernière passe de collecte : le pipeline ne journalise pas ses passes,
+--                       et une passe qui ne ramène que des doublons n'écrit rien
+--                       (INSERT OR IGNORE). Cf. la limite énoncée par l'ADR D12.
+--   jours_depuis        Âge de cet article. Seuils : ok <= 3, degrade 4-14, alerte > 14.
 --                       Ancrés sur le meilleur régime réellement atteint (médiane observée
 --                       3,5 j, ère Node-RED 3,7 j) et non sur la dérive constatée (moyenne
 --                       12,5 j) — cf. ADR D12.
@@ -35,14 +57,16 @@
 --                       de classification (le waitUntil dure quelques secondes, le retry
 --                       borné est épuisé depuis longtemps). Rattrapable par
 --                       scripts/classify-ml.mjs. C'est le SEUL compteur qui déclenche une
---                       alerte de classification, et il le fait dès 1.
+--                       alerte de classification, et il le fait dès 1. Aucun acquittement
+--                       n'est prévu : un article que Hugging Face refuserait durablement
+--                       épinglerait donc le statut — limite énoncée par l'ADR D12.
 --   ml_sans_theme       themes_ml = '[]' : article classifié, mais aucun thème au-dessus du
 --                       seuil de 0,7. N'est PAS un échec (NULL != []), n'alerte jamais.
 --   mistral_manquants   Résidu historique figé de la migration initiale, pas un
 --                       dysfonctionnement courant. N'alerte jamais.
 
 SELECT
-    (SELECT MAX(date_collecte) FROM articles) AS derniere_ingestion,
+    (SELECT MAX(date_collecte) FROM articles) AS dernier_article_collecte,
 
     CAST(julianday('now') - julianday((SELECT MAX(date_collecte) FROM articles)) AS INTEGER)
         AS jours_depuis,
