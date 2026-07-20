@@ -23,6 +23,7 @@ Le pipeline actuel a plusieurs limites :
 
 - Les données sont stockées dans un fichier JSON local sans structure. Il n'y a aucun moyen d'analyser les tendances dans le temps, la distribution par source ou par thème.
 - La classification Mistral est biaisée : 76% des articles reçoivent un score de 3, 22% un score de 4, et les scores 1, 2 et 5 ne sont jamais attribués. La catégorie HORS_SCOPE n'apparaît jamais.
+  > **Vérifié a posteriori (2026-07-20)** : mesuré sur les 276 articles de la période Node-RED, ce constat se confirme au chiffre près — 76,1 % de score 3, 23,9 % de score 4, zéro article noté 1, 2 ou 5, zéro `HORS_SCOPE`. Sur la période suivante, la concentration retombe à 58,5 % et les scores 1, 2 et `HORS_SCOPE` apparaissent. Mesure et analyse : `scripts/kpi-baseline.sql` et [`m3/04-baseline-kpi.md`](https://github.com/antoinecoulon/preparation-titre-eadl/blob/main/m3/04-baseline-kpi.md).
 - Le pipeline dépend d'un lancement manuel (ma machine n'est pas allumée en permanence), ce qui crée des trous dans la collecte.
 - L'infrastructure est locale, sans reproductibilité ni monitoring.
 
