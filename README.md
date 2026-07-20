@@ -111,6 +111,27 @@ JOIN (SELECT strftime('%Y-%m-%d', date_article) AS jour, COUNT(*) AS count
 WHERE a.nb_articles <> v.count;
 ```
 
+### KPI du processus de veille (baseline avant/après)
+
+`scripts/kpi-baseline.sql` mesure l'impact de l'industrialisation sur le processus lui-même :
+volume, régularité, fraîcheur des articles, biais de classification, couverture — avant
+(pipeline Node-RED seul, jusqu'au 2026-03-27) et après (pipeline D1, à partir du 2026-04-09).
+
+La frontière est fiable parce que `scripts/migrate.js` a conservé l'horodatage `analyzedAt` de
+Node-RED comme `date_collecte` des articles migrés : la période antérieure est réellement mesurée,
+pas reconstituée.
+
+```bash
+npx wrangler d1 execute veille-analytics --remote --json \
+  --command "$(grep -v '^\s*--' scripts/kpi-baseline.sql | tr '\n' ' ')"
+```
+
+Lecture seule. **Ne pas utiliser `--file`** : ce mode n'affiche qu'un résumé, jamais les lignes d'un
+SELECT. Le retrait des commentaires évite de dépasser la limite de longueur de ligne de commande.
+
+Analyse des résultats dans
+[`preparation-titre-eadl/m3/04-baseline-kpi.md`](https://github.com/antoinecoulon/preparation-titre-eadl/blob/main/m3/04-baseline-kpi.md).
+
 ### Annotation manuelle (jeu de validation — Étape 12)
 
 Construit un jeu de validation indépendant (~100 articles annotés à la main) pour évaluer plus
