@@ -23,6 +23,10 @@ beforeAll(async () => {
 beforeEach(async () => {
   await env.AUTH.put("API_TOKEN", TOKEN)
   await env.DB.exec("DELETE FROM articles")
+  // L'agrégat est maintenu à l'écriture : sans purge, ses lignes survivraient à la
+  // suppression des faits et fausseraient les assertions de comptage.
+  await env.DB.exec("DELETE FROM agg_quotidien")
+  await env.DB.exec("DELETE FROM dim_date")
   hfFetch = vi.fn(async () => {
     throw new Error("appel sortant non mocké")
   })

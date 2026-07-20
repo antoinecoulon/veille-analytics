@@ -1,6 +1,7 @@
 import { normalizeTags, toIsoOrNull, parseArticleRow } from "./lib/normalize"
 import { classifyArticle } from "./lib/classifyMl"
 import { computeMlComparison, type MlComparisonRow } from "./lib/mlComparison"
+import { refreshAggregatesForDay } from "./lib/aggregates"
 
 export interface Env {
   DB: D1Database;
@@ -70,6 +71,8 @@ async function handleDigest(request: Request, env: Env, ctx: ExecutionContext): 
     ? JSON.stringify(body.themes)
     : null
 
+  const dateArticle = toIsoOrNull(body.date)
+
   try {
     const result = await env.DB.prepare(
       `INSERT OR IGNORE INTO articles
@@ -85,7 +88,7 @@ async function handleDigest(request: Request, env: Env, ctx: ExecutionContext): 
         body.score || null,
         themes,
         tags,
-        toIsoOrNull(body.date),
+        dateArticle,
         new Date().toISOString()
       )
       .run()
@@ -94,6 +97,18 @@ async function handleDigest(request: Request, env: Env, ctx: ExecutionContext): 
     // inséré (pas un doublon ignoré). La réponse 201 part sans attendre HF.
     if (result.meta.changes > 0) {
       ctx.waitUntil(classifyAndStoreMl(env, body.title, body.resume || null, body.link))
+    }
+
+    // Agrégat décisionnel maintenu à l'écriture, de façon synchrone : GET /api/stats/timeline
+    // le lit directement, il doit donc être exact dès le retour de l'ingestion (cf. ADR D11).
+    // Un échec ne doit jamais faire échouer l'ingestion — même philosophie que le ML — et
+    // reste rattrapable par scripts/rebuild-aggregates.sql.
+    if (result.meta.changes > 0 && dateArticle) {
+      try {
+        await refreshAggregatesForDay(env.DB, dateArticle.slice(0, 10))
+      } catch (err) {
+        console.error(`Rafraîchissement de l'agrégat échoué pour ${dateArticle}:`, err)
+      }
     }
 
     return new Response(JSON.stringify({ status: "ok" }), {
@@ -247,14 +262,17 @@ async function fetchMlComparison(env: Env): Promise<Response> {
   return Response.json({ data: computeMlComparison(results) })
 }
 
+// Lecture de l'agrégat pré-calculé (lignes de rollup, thematique NULL) au lieu d'un
+// GROUP BY à la volée sur articles : c'est le principe même de l'entrepôt décisionnel,
+// l'agrégat étant maintenu à l'écriture par refreshAggregatesForDay (cf. ADR D11).
+// Contrat de sortie inchangé : { jour, count }.
 async function fetchArticlesTimeline(env: Env): Promise<Response> {
   const { results } = await env.DB
     .prepare(`
-        SELECT strftime('%Y-%m-%d', date_article) AS jour, COUNT(*) AS count
-        FROM articles
-        WHERE date_article IS NOT NULL
-        GROUP BY jour
-        ORDER BY jour ASC
+        SELECT date AS jour, nb_articles AS count
+        FROM agg_quotidien
+        WHERE thematique IS NULL
+        ORDER BY date ASC
       `)
     .all()
 
