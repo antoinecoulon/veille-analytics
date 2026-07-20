@@ -163,7 +163,7 @@ GET /api/stats/sources
 
 - [x] Phase 1 — Fondations (collecte, ETL, D1, migration historique)
 - [x] Phase 2 — API lecture + Dashboard + CI/CD
-- [ ] Phase 3 — ML + Analytics
+- [x] Phase 3 — ML + Analytics (classification ML, comparaison Mistral/ML, PySpark, fine-tuning)
 - [ ] Phase 4 — Finalisation + documentation M3.2
 
 ## Contexte
