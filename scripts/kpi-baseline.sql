@@ -76,6 +76,30 @@ regularite AS (
     WHERE ecart_j IS NOT NULL
     GROUP BY ere
 ),
+-- Médiane des écarts, par ère. Ajoutée après coup (P3) : c'est elle, et non la moyenne,
+-- qui ancre le seuil de fraîcheur `ok` de src/lib/health.ts (ADR D12). La moyenne de l'ère
+-- D1 est tirée vers le haut par l'unique interruption de 67 jours ; la médiane décrit le
+-- régime courant, donc le régime que l'indicateur doit considérer comme normal.
+--
+-- SQLite n'a pas de fonction de percentile : on numérote les écarts triés et on prend le
+-- terme central, ou la moyenne des deux termes centraux quand leur nombre est pair.
+-- L'arithmétique entière rend les deux rangs égaux dans le cas impair.
+mediane AS (
+    SELECT
+        ere,
+        ROUND(AVG(ecart_j), 1) AS intervalle_median_j
+    FROM (
+        SELECT
+            ere,
+            ecart_j,
+            ROW_NUMBER() OVER (PARTITION BY ere ORDER BY ecart_j) AS rang,
+            COUNT(*)     OVER (PARTITION BY ere)                  AS n
+        FROM ecarts
+        WHERE ecart_j IS NOT NULL
+    )
+    WHERE rang IN ((n + 1) / 2, (n + 2) / 2)
+    GROUP BY ere
+),
 volumes AS (
 SELECT
     ere,
@@ -104,7 +128,9 @@ GROUP BY ere
 SELECT
     v.*,
     r.intervalle_moyen_j,
+    m.intervalle_median_j,
     r.plus_longue_interruption_j
 FROM volumes v
 JOIN regularite r ON r.ere = v.ere
+JOIN mediane    m ON m.ere = v.ere
 ORDER BY v.ere DESC;
