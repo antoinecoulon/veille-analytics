@@ -173,6 +173,8 @@ describe("Agrégat — alimentation à l'ingestion", () => {
 // encadrement `date_article >= ? AND date_article < ?`, pour redevenir indexable. Le gain est
 // mesuré ailleurs (data/perf/) ; ce qui se teste ici, c'est que l'équivalence tient sur les
 // bornes — seul vrai risque de la réécriture.
+const FORMAT_ATTENDU = /^\d{4}-\d{2}-\d{2}$/
+
 describe("bornesDuJour — calcul des bornes d'un jour", () => {
   it("encadre le jour par le jour suivant", () => {
     expect(bornesDuJour("2026-06-29")).toEqual(["2026-06-29", "2026-06-30"])
@@ -196,6 +198,36 @@ describe("bornesDuJour — calcul des bornes d'un jour", () => {
 
   it("rejette un jour non analysable au lieu de produire des bornes silencieusement fausses", () => {
     expect(() => bornesDuJour("pas-une-date")).toThrow(/Jour invalide/)
+  })
+
+  // Le vrai risque n'est pas l'entrée absurde, rejetée de toute façon, mais celle qui ressemble
+  // à une date : JavaScript la reporte au lieu de la refuser, et la fenêtre s'élargit en silence.
+  it.each([
+    ["2026-02-30", "reportée au 2 mars"],
+    ["2026-06-31", "reportée au 1er juillet"],
+    ["2027-02-29", "année non bissextile"]
+  ])("rejette la date calendaire inexistante %s (%s)", (jour) => {
+    expect(() => bornesDuJour(jour)).toThrow(/date calendaire inexistante/)
+  })
+
+  it.each(["2026-13-01", "2026-00-10"])("rejette le mois hors plage %s", (jour) => {
+    expect(() => bornesDuJour(jour)).toThrow(/Jour invalide/)
+  })
+
+  // La borne basse est renvoyée telle quelle et comparée LEXICOGRAPHIQUEMENT : une forme non
+  // canonique passerait Date.parse tout en se classant au mauvais endroit ("2026-6-9" > "2026-06-10").
+  it.each(["2026-6-9", "26-06-29", "2026-06-29T10:00:00Z", "2026/06/29", " 2026-06-29"])(
+    "rejette la forme non canonique %s",
+    (jour) => {
+      expect(() => bornesDuJour(jour)).toThrow(/attendu YYYY-MM-DD/)
+    }
+  )
+
+  it("n'accepte que des bornes canoniques, donc comparables dans l'ordre lexicographique", () => {
+    const [debut, fin] = bornesDuJour("2026-06-29")
+    expect(debut < fin).toBe(true)
+    expect(debut).toMatch(FORMAT_ATTENDU)
+    expect(fin).toMatch(FORMAT_ATTENDU)
   })
 })
 

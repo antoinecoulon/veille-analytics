@@ -28,18 +28,42 @@
 // reste à un seul endroit, testable sans D1.
 const JOUR_ENCADRE = "date_article >= ?2 AND date_article < ?3"
 
+const FORMAT_JOUR = /^\d{4}-\d{2}-\d{2}$/
+
 /**
  * Bornes `[début, fin[` du jour `YYYY-MM-DD`, au format directement comparable à date_article.
  *
  * La borne haute est le jour suivant, calculé en UTC — jamais `jour + 'T99'` ou un artifice du
  * même genre : le passage de mois ou d'année doit être juste, y compris les années bissextiles.
+ *
+ * La validation est en deux temps, et les deux sont nécessaires :
+ *
+ * 1. **La forme**, par une expression régulière. `Date.parse` est bien trop permissif pour servir
+ *    de validateur : il accepte des variantes non canoniques dont la borne basse, renvoyée telle
+ *    quelle, se comparerait mal — la comparaison est lexicographique, donc `"2026-6-9"` se situe
+ *    *après* `"2026-06-10"`.
+ * 2. **L'existence**, par un aller-retour. Une date calendaire impossible passe l'expression
+ *    régulière et JavaScript la **reporte** silencieusement au lieu de la rejeter : le 30 février
+ *    2026 devient le 2 mars. Sans ce contrôle, `bornesDuJour("2026-02-30")` renvoyait
+ *    `["2026-02-30", "2026-03-03"]` — une fenêtre de **trois jours** étiquetée comme un seul, qui
+ *    aurait fait compter trois journées d'articles dans une ligne d'`agg_quotidien` unique, sans
+ *    la moindre erreur. Le message d'origine promettait « attendu YYYY-MM-DD » sans le vérifier.
+ *
+ * Le chemin d'ingestion ne peut pas produire un tel jour (`toIsoOrNull` puis `slice(0, 10)`), mais
+ * la fonction est exportée : tout appelant futur — reconstruction jour par jour, paramètre d'API —
+ * doit obtenir une erreur plutôt qu'un agrégat faux.
  */
 export function bornesDuJour(jour: string): [string, string] {
-  const debut = Date.parse(`${jour}T00:00:00.000Z`)
-  if (Number.isNaN(debut)) {
+  if (!FORMAT_JOUR.test(jour)) {
     throw new Error(`Jour invalide (attendu YYYY-MM-DD) : ${jour}`)
   }
-  return [jour, new Date(debut + 86_400_000).toISOString().slice(0, 10)]
+
+  const debut = new Date(`${jour}T00:00:00.000Z`)
+  if (Number.isNaN(debut.getTime()) || debut.toISOString().slice(0, 10) !== jour) {
+    throw new Error(`Jour invalide (date calendaire inexistante) : ${jour}`)
+  }
+
+  return [jour, new Date(debut.getTime() + 86_400_000).toISOString().slice(0, 10)]
 }
 
 /**
