@@ -1,5 +1,4 @@
--- C24 — Index de performance. Migration APPLICABLE EN PRODUCTION (contrairement aux
--- migrations 0002 à 0004, marquées `-dev`, qui ne concernent que la base locale).
+-- C24 — Index de performance.
 --
 -- Motivée par une mesure, pas par principe : `wrangler d1 insights` a montré que la base
 -- servait des balayages complets sur tous ses chemins chauds, y compris à l'écriture. Chiffres
@@ -11,10 +10,12 @@
 -- index « au cas où » : sur une table écrite à chaque ingestion, un index inutile est un coût
 -- net.
 --
--- Application (la base de prod n'ayant jamais reçu les migrations dev, on applique ce fichier
--- explicitement plutôt que par `migrations apply`) :
---   node node_modules/wrangler/bin/wrangler.js d1 execute veille-analytics --remote \
---     --file migrations/0005_perf_indexes.sql
+-- Application — la commande standard, sur tous les environnements (cf. migrations/README.md) :
+--   npx wrangler d1 migrations apply veille-analytics --remote
+--
+-- `IF NOT EXISTS` sur chaque index rend le fichier rejouable : l'appliquer sur une base qui
+-- possède déjà les index est un no-op. C'est ce qui a permis de réconcilier la production, où
+-- les index avaient d'abord été posés hors du registre `d1_migrations`.
 
 -- Sert deux besoins d'un seul index, sa colonne de tête étant date_article :
 --   1. l'encadrement du jour de refreshAggregatesForDay (chemin d'ÉCRITURE, à chaque ingestion),
