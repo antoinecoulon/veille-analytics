@@ -1,0 +1,16 @@
+# En-tetes de reponse du Worker en production AVANT correction (C18) — 2026-07-21.
+# Commande : curl -sS -D - -o /dev/null <url>  (GET reel ; curl -I envoie un HEAD,
+# non route par le Worker, qui repondrait la route de repli).
+
+## GET https://veille-analytics.<compte>.workers.dev/api/stats/health
+HTTP/1.1 200 OK
+Date: Tue, 21 Jul 2026 09:15:19 GMT
+Content-Type: application/json
+Content-Length: 225
+Connection: keep-alive
+Report-To: [tronque]
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+Server: cloudflare
+CF-RAY: a1e919b98a8919b4-CDG
+alt-svc: h3=":443"; ma=86400
+

@@ -32,6 +32,46 @@ jobs:
 
       - run: pnpm test
 
+  # Analyse de sécurité (C18). Deux couches complémentaires qui ne cherchent pas la même
+  # chose : `pnpm audit` interroge la base d'avis publics sur les dépendances INSTALLÉES,
+  # gitleaks cherche des secrets dans le code et son HISTORIQUE. Ni l'une ni l'autre ne
+  # juge la logique applicative — c'est une limite à assumer, pas à masquer.
+  #
+  # Job séparé de `quality` : les deux tournent en parallèle, et un pipeline rouge dit
+  # immédiatement s'il s'agit d'un défaut fonctionnel ou d'un défaut de sécurité.
+  # Il ne bloque PAS le déploiement (`deploy` ne dépend que de `quality`) : un avis
+  # publié sur une dépendance de développement ne doit pas empêcher de livrer un
+  # correctif en production. Il rend le pipeline rouge, ce qui suffit à forcer le
+  # traitement — cf. ADR D14.
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 — gitleaks analyse tout l'historique, pas seulement le dernier
+      # commit. Un secret retiré dans un commit ultérieur reste exposé dans les objets git.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Seuil `high` : au 2026-07-21, la totalité des avis remontés venait de dépendances
+      # transitives de wrangler (undici, ws, esbuild), outillage de développement jamais
+      # embarqué dans le bundle du Worker. Un seuil `low` rendrait le pipeline rouge en
+      # permanence pour des avis sans effet en production, et un pipeline qu'on apprend à
+      # ignorer ne protège plus rien.
+      - run: pnpm audit --audit-level=high
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   deploy:
     needs: quality
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'

@@ -3,6 +3,7 @@ import { classifyArticle } from "./lib/classifyMl"
 import { computeMlComparison, type MlComparisonRow } from "./lib/mlComparison"
 import { refreshAggregatesForDay } from "./lib/aggregates"
 import { computeHealth, seuilRetardMl, type HealthRow } from "./lib/health"
+import { withSecurityHeaders } from "./lib/securityHeaders"
 
 export interface Env {
   DB: D1Database;
@@ -11,40 +12,93 @@ export interface Env {
 }
 
 export default {
+  // Le routage est délégué à `route` ; ce point d'entrée ne fait qu'appliquer les
+  // en-têtes de sécurité à ce qui en sort, quelle que soit la branche empruntée —
+  // y compris les 401, 403 et 500, qui sont des réponses comme les autres.
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url)
-
-    if (request.method === "POST" && url.pathname === "/api/ingest") {
-      return handleDigest(request, env, ctx)
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/articles") {
-      const params = url.searchParams
-      return fetchArticles(params, env)
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/stats/themes") {
-      return fetchArticlesCountByTheme(env)
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/stats/sources") {
-      return fetchArticlesCountBySource(env)
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/stats/timeline") {
-      return fetchArticlesTimeline(env)
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/stats/ml-comparison") {
-      return fetchMlComparison(env)
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/stats/health") {
-      return fetchHealth(env)
-    }
-    
-    return new Response("VeilleAnalytics API - OK");
+    return withSecurityHeaders(await route(request, env, ctx))
   }
+}
+
+// Routes de lecture réservées au dashboard (C18).
+//
+// Constat mesuré le 2026-07-21 : ces routes répondaient à tout le monde. La protection
+// des données reposait entièrement sur `proxyToWorker` côté dashboard, qui vérifie la
+// session avant de relayer — mais rien n'obligeait à passer par le dashboard, et l'URL
+// publique du Worker est versionnée en clair dans un dépôt public. Un simple
+// `curl /api/articles` renvoyait 16 522 octets d'articles. C'est la leçon de l'Étape 15
+// — « protéger l'UI ne suffit pas, il faut protéger la donnée » — qui n'avait été
+// appliquée qu'à un seul étage.
+//
+// Whitelist et non blacklist : une route absente de cette liste est PUBLIQUE, donc une
+// route ajoutée demain sans y penser sera publique par défaut. Le choix est assumé et
+// c'est le seul qui reste vrai : la liste inverse ferait passer pour protégée une route
+// qu'on aurait simplement oublié d'inscrire. Il n'y a que deux exceptions volontaires,
+// `/api/stats/health` (supervision, appelée hors session) et la route de repli, qui ne
+// rend aucune donnée.
+const LECTURES_PROTEGEES = new Set([
+  "/api/articles",
+  "/api/stats/themes",
+  "/api/stats/sources",
+  "/api/stats/timeline",
+  "/api/stats/ml-comparison"
+])
+
+// Jeton partagé entre le dashboard et le Worker, stocké dans le même KV que le jeton
+// d'ingestion — un seul endroit où regarder, et il survit à `wrangler deploy` (les vars
+// plaintext, elles, sont écrasées, cf. Étape 15). En-tête dédié plutôt que `Authorization`
+// pour ne pas confondre deux autorisations distinctes : ingérer et lire ne sont pas le
+// même droit et n'ont pas le même porteur.
+const EN_TETE_LECTURE = "X-Dashboard-Token"
+
+async function verifieJetonLecture(request: Request, env: Env): Promise<Response | null> {
+  const attendu = await env.AUTH.get("READ_TOKEN")
+  // Jeton absent du KV = refus. Un `if (attendu && ...)` transformerait une erreur de
+  // configuration en ouverture silencieuse : la panne doit fermer, pas ouvrir.
+  if (!attendu || request.headers.get(EN_TETE_LECTURE) !== attendu) {
+    return new Response("Non autorisé", { status: 401 })
+  }
+  return null
+}
+
+async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const url = new URL(request.url)
+
+  if (request.method === "POST" && url.pathname === "/api/ingest") {
+    return handleDigest(request, env, ctx)
+  }
+
+  if (LECTURES_PROTEGEES.has(url.pathname)) {
+    const refus = await verifieJetonLecture(request, env)
+    if (refus) return refus
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/articles") {
+    const params = url.searchParams
+    return fetchArticles(params, env)
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/stats/themes") {
+    return fetchArticlesCountByTheme(env)
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/stats/sources") {
+    return fetchArticlesCountBySource(env)
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/stats/timeline") {
+    return fetchArticlesTimeline(env)
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/stats/ml-comparison") {
+    return fetchMlComparison(env)
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/stats/health") {
+    return fetchHealth(env)
+  }
+
+  return new Response("VeilleAnalytics API - OK")
 }
 
 async function handleDigest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {

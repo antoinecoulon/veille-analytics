@@ -9,6 +9,9 @@ import worker from "../src/index"
 import { LABEL_MAP } from "../src/lib/classifyMl"
 
 const TOKEN = "test-token"
+// Jeton de lecture, distinct de celui d'ingestion : deux droits différents, deux
+// porteurs différents. Les prendre égaux dans les tests masquerait une confusion des deux.
+const READ_TOKEN = "test-read-token"
 
 // Seul l'appel HF (classification ML en waitUntil) passe par le fetch global :
 // on le mocke directement. Par défaut il échoue (pas de réseau dans les tests),
@@ -22,6 +25,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await env.AUTH.put("API_TOKEN", TOKEN)
+  await env.AUTH.put("READ_TOKEN", READ_TOKEN)
   await env.DB.exec("DELETE FROM articles")
   // L'agrégat est maintenu à l'écriture : sans purge, ses lignes survivraient à la
   // suppression des faits et fausseraient les assertions de comptage.
@@ -55,8 +59,11 @@ async function ingest(body: unknown, token: string | null = TOKEN): Promise<Resp
   return res
 }
 
-function get(path: string): Promise<Response> {
-  return worker.fetch(new Request(`https://x${path}`), env, createExecutionContext())
+// Les lectures passent par le jeton de lecture, comme le fait le proxy du dashboard.
+// `token: null` reproduit un appel direct depuis l'extérieur.
+function get(path: string, token: string | null = READ_TOKEN): Promise<Response> {
+  const headers = token === null ? undefined : { "X-Dashboard-Token": token }
+  return worker.fetch(new Request(`https://x${path}`, { headers }), env, createExecutionContext())
 }
 
 // Mocke une réponse HF (format pipeline) pour le prochain appel Inference API.
@@ -263,5 +270,90 @@ describe("GET /api/stats/*", () => {
     expect(res.status).toBe(200)
     const body = (await res.json()) as { data: Array<{ jour: string; count: number }> }
     expect(body.data).toEqual([{ jour: "2026-01-15", count: 1 }])
+  })
+})
+
+// En-têtes de sécurité (C18). Le point testé n'est pas « la fonction pose bien les
+// en-têtes » — ce serait tester la fonction contre elle-même — mais « AUCUNE réponse du
+// Worker n'y échappe », y compris les chemins d'erreur et la route de repli. C'est
+// précisément la propriété qu'une application au cas par cas finirait par perdre.
+describe("En-têtes de sécurité sur toutes les réponses", () => {
+  const attendus = {
+    "X-Content-Type-Options": "nosniff",
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+    "Referrer-Policy": "no-referrer",
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains"
+  }
+
+  it.each([
+    ["route de repli", () => get("/")],
+    ["lecture d'articles", () => get("/api/articles")],
+    ["statistiques", () => get("/api/stats/themes")],
+    ["indicateur de santé", () => get("/api/stats/health")]
+  ])("%s", async (_libelle, appel) => {
+    const res = await appel()
+    for (const [nom, valeur] of Object.entries(attendus)) {
+      expect(res.headers.get(nom)).toBe(valeur)
+    }
+  })
+
+  it("un refus d'authentification les porte aussi", async () => {
+    const res = await ingest(article, null)
+    expect(res.status).toBe(401)
+    expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff")
+  })
+
+  it("le Content-Type d'origine n'est pas écrasé", async () => {
+    const res = await get("/api/stats/themes")
+    expect(res.headers.get("Content-Type")).toContain("application/json")
+  })
+})
+
+// Jeton de lecture (C18). Le constat d'origine n'était pas « il manque un contrôle »
+// mais « le contrôle existe, au mauvais étage » : la session était vérifiée par le
+// dashboard, et l'URL du Worker permettait de ne pas passer par le dashboard.
+describe("Routes de lecture réservées au dashboard", () => {
+  const protegees = [
+    "/api/articles",
+    "/api/stats/themes",
+    "/api/stats/sources",
+    "/api/stats/timeline",
+    "/api/stats/ml-comparison"
+  ]
+
+  it.each(protegees)("401 sans jeton sur %s", async (path) => {
+    const res = await get(path, null)
+    expect(res.status).toBe(401)
+  })
+
+  it.each(protegees)("401 avec un mauvais jeton sur %s", async (path) => {
+    const res = await get(path, "mauvais-jeton")
+    expect(res.status).toBe(401)
+  })
+
+  it.each(protegees)("200 avec le bon jeton sur %s", async (path) => {
+    const res = await get(path)
+    expect(res.status).toBe(200)
+  })
+
+  // Exceptions volontaires : la supervision doit répondre hors session, et la route de
+  // repli ne rend aucune donnée. Les tester évite qu'on les ferme par inadvertance en
+  // élargissant la liste — et qu'on découvre la panne par un indicateur devenu muet.
+  it("l'indicateur de santé reste joignable sans jeton", async () => {
+    const res = await get("/api/stats/health", null)
+    expect(res.status).toBe(200)
+  })
+
+  it("la route de repli reste joignable sans jeton", async () => {
+    const res = await get("/", null)
+    expect(res.status).toBe(200)
+  })
+
+  // Une erreur de configuration doit fermer, pas ouvrir : sans jeton en KV, la
+  // comparaison « en-tête absent === valeur absente » aurait pu réussir.
+  it("refuse tout si le jeton est absent du KV", async () => {
+    await env.AUTH.delete("READ_TOKEN")
+    expect((await get("/api/articles", null)).status).toBe(401)
+    expect((await get("/api/articles", READ_TOKEN)).status).toBe(401)
   })
 })

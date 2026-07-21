@@ -1,0 +1,499 @@
+{
+  "actions": [
+    {
+      "action": "review",
+      "module": "ws",
+      "resolves": [
+        {
+          "id": 1119108,
+          "path": ".>wrangler>miniflare>ws",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1123259,
+          "path": ".>wrangler>miniflare>ws",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "esbuild",
+      "resolves": [
+        {
+          "id": 1120680,
+          "path": ".>wrangler>esbuild",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "undici",
+      "resolves": [
+        {
+          "id": 1121187,
+          "path": ".>wrangler>miniflare>undici",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1121241,
+          "path": ".>wrangler>miniflare>undici",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1121244,
+          "path": ".>wrangler>miniflare>undici",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1121247,
+          "path": ".>wrangler>miniflare>undici",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1121249,
+          "path": ".>wrangler>miniflare>undici",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1121254,
+          "path": ".>wrangler>miniflare>undici",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1121428,
+          "path": ".>wrangler>miniflare>undici",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    }
+  ],
+  "advisories": {
+    "1119108": {
+      "findings": [
+        {
+          "version": "8.18.0",
+          "paths": [
+            ".>wrangler>miniflare>ws"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/websockets/ws/security/advisories/GHSA-58qx-3vcg-4xpx\n- https://nvd.nist.gov/vuln/detail/CVE-2026-45736\n- https://github.com/websockets/ws/commit/c0327ec15a54d701eb6ccefaa8bef328cfc03086\n- https://github.com/advisories/GHSA-58qx-3vcg-4xpx",
+      "created": "2026-05-18T19:02:40.000Z",
+      "id": 1119108,
+      "npm_advisory_id": null,
+      "overview": "### Impact\n\nThe `websocket.close()` implementation is vulnerable to uninitialized memory disclosure when a `TypedArray` is passed as the reason argument.\n\n### Proof of concept\n\n```js\nimport { deepStrictEqual } from 'node:assert';\nimport { WebSocket, WebSocketServer } from 'ws';\n\nconst wss = new WebSocketServer(\n  { port: 0, skipUTF8Validation: true },\n  function () {\n    const { port } = wss.address();\n    const ws = new WebSocket(`ws://localhost:${port}`, {\n      skipUTF8Validation: true\n    });\n\n    ws.on('close', function (code, reason) {\n      deepStrictEqual(reason, Buffer.alloc(80));\n    });\n  }\n);\n\nwss.on('connection', function (ws) {\n  ws.close(1000, new Float32Array(20));\n});\n```\n\n### Patches\n\nThe vulnerability was fixed in ws@8.20.1 (https://github.com/websockets/ws/commit/c0327ec15a54d701eb6ccefaa8bef328cfc03086).\n\n### Credits\n\nCredit for the private and responsible disclosure of this issue goes to [Nikita Skovoroda](https://github.com/ChALkeR).\n\n### Remarks\n\nAlthough the calculated CVSS severity is medium, the actual severity is believed to be low, as the flaw is only exploitable through misuse that is unlikely in practice.\n\n### Resources\n\n- https://github.com/advisories/GHSA-58qx-3vcg-4xpx\n- https://www.cve.org/CVERecord?id=CVE-2026-45736",
+      "reported_by": null,
+      "title": "ws: Uninitialized memory disclosure",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-45736"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "ws",
+      "vulnerable_versions": ">=8.0.0 <8.20.1",
+      "github_advisory_id": "GHSA-58qx-3vcg-4xpx",
+      "recommendation": "Upgrade to version 8.20.1 or later",
+      "patched_versions": ">=8.20.1",
+      "updated": "2026-05-18T19:02:42.000Z",
+      "cvss": {
+        "score": 4.4,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:N/A:N"
+      },
+      "cwe": [
+        "CWE-908"
+      ],
+      "url": "https://github.com/advisories/GHSA-58qx-3vcg-4xpx"
+    },
+    "1120680": {
+      "findings": [
+        {
+          "version": "0.27.3",
+          "paths": [
+            ".>wrangler>esbuild"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/evanw/esbuild/security/advisories/GHSA-g7r4-m6w7-qqqr\n- https://github.com/evanw/esbuild/releases/tag/v0.28.1\n- https://github.com/advisories/GHSA-g7r4-m6w7-qqqr",
+      "created": "2026-06-12T20:08:53.000Z",
+      "id": 1120680,
+      "npm_advisory_id": null,
+      "overview": "### Summary\n\nThe development server contains a path traversal vulnerability on Windows when serving files from `servedir`.\n\nDue to the use of `path.Clean()` (which only normalizes forward-slash `/` separators) instead of a Windows-aware path normalization function, it is possible to craft requests using backslashes (`\\`) that bypass the intended directory containment logic. An attacker can escape the configured `servedir` root and access arbitrary files on the filesystem.\nThis issue affects Windows environments only.\n\n### Details\n\nThe request path is sanitized using:\n```go\n// https://github.com/evanw/esbuild/blob/v0.27.3/pkg/api/serve_other.go#L165\nqueryPath := path.Clean(req.URL.Path)[1:]\n```\n\n\nHowever:\n- `path.Clean()` is POSIX-style and only understands `/` (docs: `https://pkg.go.dev/path#Clean`)\n- On Windows, `\\` is a valid path separator\n- `path.Clean()` does not treat `\\` as a separator\n\nLater, the server constructs the absolute path:\n```go\n// https://github.com/evanw/esbuild/blob/v0.27.3/pkg/api/serve_other.go#L221\nabsPath := h.fs.Join(h.servedir, queryPath)\n```\n\nIf `queryPath` contains sequences such as:\n```\n..\\..\\..\\..\\..\\..\\..\\Windows\\system.ini\n```\n\n`path.Clean()` will not normalize them, but the Windows filesystem will interpret `\\` as directory separators when resolving `absPath`.\nBecause the implementation does not verify that the final resolved path remains within `servedir`, it allows directory traversal outside the intended root directory.\n### Vulnerable Code\n\n```go\n// https://github.com/evanw/esbuild/blob/v0.27.3/pkg/api/serve_other.go#L165\n\tqueryPath := path.Clean(req.URL.Path)[1:]\n\t....\n\t// Check for a file in the \"servedir\" directory\n\tif h.servedir != \"\" && kind != fs.FileEntry {\n\t\tabsPath := h.fs.Join(h.servedir, queryPath)\n\t\tif absDir := h.fs.Dir(absPath); absDir != absPath {\n\t\t\tif entries, err, _ := h.fs.ReadDirectory(absDir); err == nil {\n\t\t\t\tif entry, _ := entries.Get(h.fs.Base(absPath)); entry != nil && entry.Kind(h.fs) == fs.FileEntry {\n\t....\t\t\t\t\n```\n\n\n### Steps to reproduce\n\n```\nnpm install --save-exact --save-dev esbuild\n\necho \"console.log(1)\" > app.js\n\n.\\node_modules\\.bin\\esbuild --version\n0.27.3\n\n.\\node_modules\\.bin\\esbuild app.js --bundle --outdir=www --servedir=www --watch\n\ncurl -i --path-as-is \"http://localhost:8000/..\\..\\..\\..\\..\\..\\..\\Windows\\system.ini\"\n<content of Windows\\system.ini>\n```\n\n\n### Impact\n\n- Arbitrary file read on Windows\n- Exposure of sensitive files",
+      "reported_by": null,
+      "title": "esbuild allows arbitrary file read when running the development server on Windows",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "low",
+      "module_name": "esbuild",
+      "vulnerable_versions": ">=0.27.3 <0.28.1",
+      "github_advisory_id": "GHSA-g7r4-m6w7-qqqr",
+      "recommendation": "Upgrade to version 0.28.1 or later",
+      "patched_versions": ">=0.28.1",
+      "updated": "2026-06-12T20:08:54.000Z",
+      "cvss": {
+        "score": 2.5,
+        "vectorString": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-22"
+      ],
+      "url": "https://github.com/advisories/GHSA-g7r4-m6w7-qqqr"
+    },
+    "1121187": {
+      "findings": [
+        {
+          "version": "7.24.4",
+          "paths": [
+            ".>wrangler>miniflare>undici"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodejs/undici/security/advisories/GHSA-vmh5-mc38-953g\n- https://nvd.nist.gov/vuln/detail/CVE-2026-9697\n- https://cna.openjsf.org/security-advisories.html\n- https://github.com/advisories/GHSA-vmh5-mc38-953g",
+      "created": "2026-06-18T14:28:21.000Z",
+      "id": 1121187,
+      "npm_advisory_id": null,
+      "overview": "## Impact\n\nundici's `ProxyAgent` silently drops the `requestTls` option when configured with a SOCKS5 proxy URI (`socks5://` or `socks://`). The target HTTPS connection through the SOCKS5 tunnel falls back to Node's default trust store, ignoring user-configured `ca`, `cert`, `key`, `rejectUnauthorized`, and `servername` settings.\n\nApplications that pin to an internal or corporate CA via `requestTls.ca` will, when their proxy URI is SOCKS5, get the default Mozilla CA bundle as the trust anchor instead. Any cert signed by any publicly-trusted CA for the target hostname is accepted, breaking the intended pin and enabling MITM read and tamper of the HTTPS exchange.\n\nAffected applications are those that use undici's `ProxyAgent` (or `Socks5ProxyAgent` directly) with SOCKS5 AND rely on `requestTls` for TLS scope restriction. The bug was introduced in undici 7.23.0 when SOCKS5 support was added.\n\n## Patches\n\nUpgrade to undici v7.28.0 or v8.5.0.\n\n## Workarounds\n\nNo workaround is available within the SOCKS5 path. If a SOCKS5 proxy with TLS scope restriction is required and an upgrade is not yet possible, route the traffic through an HTTP-proxy `ProxyAgent` instead, where `requestTls` is honored correctly.",
+      "reported_by": null,
+      "title": "undici vulnerable to TLS certificate validation bypass via dropped requestTls in SOCKS5 ProxyAgent",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-9697"
+      ],
+      "access": "public",
+      "severity": "high",
+      "module_name": "undici",
+      "vulnerable_versions": ">=7.23.0 <7.28.0",
+      "github_advisory_id": "GHSA-vmh5-mc38-953g",
+      "recommendation": "Upgrade to version 7.28.0 or later",
+      "patched_versions": ">=7.28.0",
+      "updated": "2026-06-18T14:28:21.000Z",
+      "cvss": {
+        "score": 7.4,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N"
+      },
+      "cwe": [
+        "CWE-295"
+      ],
+      "url": "https://github.com/advisories/GHSA-vmh5-mc38-953g"
+    },
+    "1121241": {
+      "findings": [
+        {
+          "version": "7.24.4",
+          "paths": [
+            ".>wrangler>miniflare>undici"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodejs/undici/security/advisories/GHSA-p88m-4jfj-68fv\n- https://nvd.nist.gov/vuln/detail/CVE-2026-9679\n- https://cna.openjsf.org/security-advisories.html\n- https://github.com/advisories/GHSA-p88m-4jfj-68fv",
+      "created": "2026-06-19T14:21:30.000Z",
+      "id": 1121241,
+      "npm_advisory_id": null,
+      "overview": "## Impact\n\nundici's cookie parser in `parseSetCookie` percent-decodes cookie values via `qsUnescape`, turning encoded sequences like `%0D%0A`, `%00`, `%3B`, and `%3D` into their literal byte equivalents. RFC 6265 §5.4 does not specify any decoding and browsers do not decode either.\n\nApplications that parse a `Set-Cookie` header and then forward the parsed value into a response header (proxies, middleware, SSR frameworks) become vulnerable to HTTP response header injection: an attacker-controlled upstream can inject arbitrary `Set-Cookie`, `Location`, or `Cache-Control` headers into the application's downstream response, enabling session fixation, open redirect, or cache poisoning.\n\nAffected applications are those that use undici's cookie parsing (`parseSetCookie`, `parseCookie`, `getSetCookies`) and forward the parsed cookie value into a response header.\n\nThis was introduced in undici 7.0.0 via [#3789](https://github.com/nodejs/undici/pull/3789).\n\n## Patches\n\nUpgrade to undici v6.27.0, v7.28.0 or v8.5.0.\n\n## Workarounds\n\nIf upgrade is not immediately possible, do not forward values returned by `parseSetCookie`/`parseCookie`/`getSetCookies` directly into response headers; sanitize the value first to strip or reject CR, LF, NUL, `;`, and `=` bytes.",
+      "reported_by": null,
+      "title": "undici vulnerable to HTTP header injection via Set-Cookie percent-decoding",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-9679"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "undici",
+      "vulnerable_versions": ">=7.0.0 <7.28.0",
+      "github_advisory_id": "GHSA-p88m-4jfj-68fv",
+      "recommendation": "Upgrade to version 7.28.0 or later",
+      "patched_versions": ">=7.28.0",
+      "updated": "2026-06-19T14:23:30.000Z",
+      "cvss": {
+        "score": 5.9,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:H/A:N"
+      },
+      "cwe": [
+        "CWE-93"
+      ],
+      "url": "https://github.com/advisories/GHSA-p88m-4jfj-68fv"
+    },
+    "1121244": {
+      "findings": [
+        {
+          "version": "7.24.4",
+          "paths": [
+            ".>wrangler>miniflare>undici"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodejs/undici/security/advisories/GHSA-vxpw-j846-p89q\n- https://nvd.nist.gov/vuln/detail/CVE-2026-12151\n- https://cna.openjsf.org/security-advisories.html\n- https://github.com/advisories/GHSA-vxpw-j846-p89q",
+      "created": "2026-06-19T14:22:01.000Z",
+      "id": 1121244,
+      "npm_advisory_id": null,
+      "overview": "## Impact\n\nThe undici WebSocket client enforces `maxPayloadSize` on the cumulative byte count of fragments in a message but does not enforce a limit on the number of fragments. A malicious WebSocket server can stream many small or empty continuation frames that each pass per-frame and cumulative-size validation, collectively causing unbounded memory growth in the client process. The result is memory exhaustion and a denial of service.\n\nAffected applications are those using the undici WebSocket client (`new WebSocket(...)`) or the `WebSocketStream` API that can be induced to connect to an attacker-controlled or compromised WebSocket endpoint.\n\nAll releases starting at undici 6.17.0 are affected.\n\n## Patches\n\nUpgrade to undici v6.27.0, v7.28.0 or v8.5.0.\n\n## Workarounds\n\nNo workaround is available. The fix must be applied through an upgrade.",
+      "reported_by": null,
+      "title": "undici WebSocket client vulnerable to denial of service via fragment count bypass",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-12151"
+      ],
+      "access": "public",
+      "severity": "high",
+      "module_name": "undici",
+      "vulnerable_versions": ">=7.0.0 <7.28.0",
+      "github_advisory_id": "GHSA-vxpw-j846-p89q",
+      "recommendation": "Upgrade to version 7.28.0 or later",
+      "patched_versions": ">=7.28.0",
+      "updated": "2026-06-19T14:23:29.000Z",
+      "cvss": {
+        "score": 7.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      },
+      "cwe": [
+        "CWE-400",
+        "CWE-770"
+      ],
+      "url": "https://github.com/advisories/GHSA-vxpw-j846-p89q"
+    },
+    "1121247": {
+      "findings": [
+        {
+          "version": "7.24.4",
+          "paths": [
+            ".>wrangler>miniflare>undici"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodejs/undici/security/advisories/GHSA-hm92-r4w5-c3mj\n- https://nvd.nist.gov/vuln/detail/CVE-2026-6734\n- https://github.com/nodejs/undici/pull/5041\n- https://cna.openjsf.org/security-advisories.html\n- https://github.com/advisories/GHSA-hm92-r4w5-c3mj",
+      "created": "2026-06-19T14:20:20.000Z",
+      "id": 1121247,
+      "npm_advisory_id": null,
+      "overview": "## Impact\n\nWhen using `Socks5ProxyAgent`, undici reuses a single connection pool across different origins without verifying that the pool's origin matches the requested origin. All requests are dispatched through the pool connected to the first origin, regardless of the intended destination.\n\nThis causes cross-origin request routing: credentials and request data intended for origin B are sent to origin A, responses from the wrong origin are trusted, and HTTPS requests may be silently downgraded to HTTP.\n\nImpacted users are applications that use `Socks5ProxyAgent` (directly or via `setGlobalDispatcher`) and make requests to more than one origin.\n\nThis was introduced in undici 7.23.0 via [#4385](https://github.com/nodejs/undici/pull/4385) and affects all versions through 8.1.0.\n\n## Patches\n\nUpgrade to undici v7.28.0 or v8.2.0\n\n## Workarounds\n\nUse a separate `Socks5ProxyAgent` instance per origin, or avoid using `Socks5ProxyAgent` with multiple origins.",
+      "reported_by": null,
+      "title": "undici vulnerable to cross-origin request routing via SOCKS5 proxy pool reuse",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-6734"
+      ],
+      "access": "public",
+      "severity": "high",
+      "module_name": "undici",
+      "vulnerable_versions": ">=7.23.0 <7.28.0",
+      "github_advisory_id": "GHSA-hm92-r4w5-c3mj",
+      "recommendation": "Upgrade to version 7.28.0 or later",
+      "patched_versions": ">=7.28.0",
+      "updated": "2026-06-19T14:20:20.000Z",
+      "cvss": {
+        "score": 7.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H"
+      },
+      "cwe": [
+        "CWE-346"
+      ],
+      "url": "https://github.com/advisories/GHSA-hm92-r4w5-c3mj"
+    },
+    "1121249": {
+      "findings": [
+        {
+          "version": "7.24.4",
+          "paths": [
+            ".>wrangler>miniflare>undici"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodejs/undici/security/advisories/GHSA-35p6-xmwp-9g52\n- https://nvd.nist.gov/vuln/detail/CVE-2026-6733\n- https://hackerone.com/reports/3582376\n- https://cna.openjsf.org/security-advisories.html\n- https://github.com/advisories/GHSA-35p6-xmwp-9g52",
+      "created": "2026-06-19T14:19:13.000Z",
+      "id": 1121249,
+      "npm_advisory_id": null,
+      "overview": "## Impact\n\nUndici's HTTP/1.1 client is vulnerable to response queue poisoning on reused keep-alive sockets. An attacker-controlled upstream server can inject an unsolicited HTTP/1.1 response onto an idle socket after a request completes. When the client dispatches the next request on that socket, it associates the injected response with the new request, causing responses to be delivered to the wrong requests.\n\nThis requires an attacker-controlled or compromised upstream HTTP/1.1 server and keep-alive connection reuse.\n\n## Patches\n\nUpgrade to undici v6.27.0, v7.28.0 or v8.5.0.\n\n## Workarounds\n\nDisable keep-alive connection reuse by setting `keepAliveTimeout: 0` on the Client or Pool.",
+      "reported_by": null,
+      "title": "undici vulnerable to HTTP response queue poisoning via keep-alive socket reuse",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-6733"
+      ],
+      "access": "public",
+      "severity": "low",
+      "module_name": "undici",
+      "vulnerable_versions": ">=7.0.0 <7.28.0",
+      "github_advisory_id": "GHSA-35p6-xmwp-9g52",
+      "recommendation": "Upgrade to version 7.28.0 or later",
+      "patched_versions": ">=7.28.0",
+      "updated": "2026-06-19T14:19:15.000Z",
+      "cvss": {
+        "score": 3.7,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-367"
+      ],
+      "url": "https://github.com/advisories/GHSA-35p6-xmwp-9g52"
+    },
+    "1121254": {
+      "findings": [
+        {
+          "version": "7.24.4",
+          "paths": [
+            ".>wrangler>miniflare>undici"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodejs/undici/security/advisories/GHSA-g8m3-5g58-fq7m\n- https://nvd.nist.gov/vuln/detail/CVE-2026-11525\n- https://cna.openjsf.org/security-advisories.html\n- https://github.com/advisories/GHSA-g8m3-5g58-fq7m",
+      "created": "2026-06-19T14:34:46.000Z",
+      "id": 1121254,
+      "npm_advisory_id": null,
+      "overview": "## Impact\n\nWhen undici parses a `Set-Cookie` header, it accepts any `SameSite` attribute value that contains `Strict`, `Lax`, or `None` as a substring, rather than the case-insensitive exact match specified by RFC 6265. Non-spec values are silently mapped to one of the three standard tokens:\n\n- `SameSite=NoneOfYourBusiness` is parsed as `None`, the most permissive setting.\n- `SameSite=StrictLax` is parsed as `Lax`, a downgrade from `Strict`.\n\nAffected applications are those that consume `Set-Cookie` headers from server responses (for example via undici's `fetch` or proxy code paths) and then forward or rely on the parsed `sameSite` attribute. A malicious or non-compliant server can coerce the consumer's view of a cookie's SameSite policy to a weaker value, silently degrading the SameSite enforcement the cookie is supposed to provide.\n\nThis was introduced in undici 5.15.0 when the cookies feature was added.\n\n## Patches\n\nUpgrade to undici v6.27.0, v7.28.0 or v8.5.0.\n\n## Workarounds\n\nAfter parsing a `Set-Cookie` header, validate that the resulting `sameSite` attribute is one of `'Strict'`, `'Lax'`, or `'None'` (exact, case-insensitive) before forwarding or relying on it.",
+      "reported_by": null,
+      "title": "undici vulnerable to Set-Cookie SameSite attribute downgrade via permissive substring matching",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-11525"
+      ],
+      "access": "public",
+      "severity": "low",
+      "module_name": "undici",
+      "vulnerable_versions": ">=7.0.0 <7.28.0",
+      "github_advisory_id": "GHSA-g8m3-5g58-fq7m",
+      "recommendation": "Upgrade to version 7.28.0 or later",
+      "patched_versions": ">=7.28.0",
+      "updated": "2026-06-19T14:34:46.000Z",
+      "cvss": {
+        "score": 3.7,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-183"
+      ],
+      "url": "https://github.com/advisories/GHSA-g8m3-5g58-fq7m"
+    },
+    "1121428": {
+      "findings": [
+        {
+          "version": "7.24.4",
+          "paths": [
+            ".>wrangler>miniflare>undici"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodejs/undici/security/advisories/GHSA-pr7r-676h-xcf6\n- https://nvd.nist.gov/vuln/detail/CVE-2026-9678\n- https://cna.openjsf.org/security-advisories.html\n- https://github.com/advisories/GHSA-pr7r-676h-xcf6",
+      "created": "2026-06-18T14:28:13.000Z",
+      "id": 1121428,
+      "npm_advisory_id": null,
+      "overview": "## Impact\n\nUndici's cache interceptor incorrectly classifies some responses as cacheable when the upstream `Cache-Control` header uses whitespace-padded qualified `private` or `no-cache` field names such as `private=\" authorization\"` or `no-cache=\"\\tauthorization\"`. The parser preserves the surrounding whitespace, so later comparisons against the literal `authorization` field name fail and the response is stored.\n\nIn shared-cache mode, this allows a response containing one user's authenticated data to be served from cache to a subsequent caller, including an unauthenticated caller, when both requests resolve to the same cache key.\n\nAffected applications are those that explicitly enable the cache interceptor (`interceptors.cache()`) in shared mode, forward `Authorization` headers upstream, and receive cacheable responses with non-canonical qualified `private` or `no-cache` directives.\n\n## Patches\n\nUpgrade to undici v7.28.0 or v8.5.0.\n\n## Workarounds\n\nIf upgrade is not immediately possible, disable shared-cache mode for traffic that includes `Authorization` headers, avoid caching responses to authenticated requests, or add `Vary: Authorization` upstream.",
+      "reported_by": null,
+      "title": "undici vulnerable to cross-user information disclosure via shared cache whitespace bypass",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-9678"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "undici",
+      "vulnerable_versions": ">=7.0.0 <7.28.0",
+      "github_advisory_id": "GHSA-pr7r-676h-xcf6",
+      "recommendation": "Upgrade to version 7.28.0 or later",
+      "patched_versions": ">=7.28.0",
+      "updated": "2026-06-24T14:11:34.000Z",
+      "cvss": {
+        "score": 5.9,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+      },
+      "cwe": [
+        "CWE-524"
+      ],
+      "url": "https://github.com/advisories/GHSA-pr7r-676h-xcf6"
+    },
+    "1123259": {
+      "findings": [
+        {
+          "version": "8.18.0",
+          "paths": [
+            ".>wrangler>miniflare>ws"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/websockets/ws/security/advisories/GHSA-96hv-2xvq-fx4p\n- https://github.com/websockets/ws/commit/86d3e8a5fb0246ed373860c5fbb0de88824a27f7\n- https://github.com/websockets/ws/commit/b5372ac67bb97a773727b8e9f5035a8123556d53\n- https://github.com/websockets/ws/commit/bca91adf15677e47dbe4f959653452727be28b94\n- https://github.com/websockets/ws/commit/fd36cd864fcdf62a08273a99e19a7d975401fee8\n- https://nvd.nist.gov/vuln/detail/CVE-2026-48779\n- https://security.access.redhat.com/data/csaf/v2/vex/2026/cve-2026-48779.json\n- https://bugzilla.redhat.com/show_bug.cgi?id=2489661\n- https://access.redhat.com/security/cve/CVE-2026-48779\n- https://access.redhat.com/errata/RHSA-2026:34342\n- https://access.redhat.com/errata/RHSA-2026:33574\n- https://access.redhat.com/errata/RHSA-2026:33183\n- https://access.redhat.com/errata/RHSA-2026:33173\n- https://access.redhat.com/errata/RHSA-2026:33163\n- https://access.redhat.com/errata/RHSA-2026:33160\n- https://access.redhat.com/errata/RHSA-2026:33155\n- https://access.redhat.com/errata/RHSA-2026:29197\n- https://access.redhat.com/errata/RHSA-2026:36820\n- https://access.redhat.com/errata/RHSA-2026:36754\n- https://access.redhat.com/errata/RHSA-2026:37272\n- https://access.redhat.com/errata/RHSA-2026:27171\n- https://access.redhat.com/errata/RHSA-2026:26638\n- https://github.com/advisories/GHSA-96hv-2xvq-fx4p",
+      "created": "2026-06-15T16:34:23.000Z",
+      "id": 1123259,
+      "npm_advisory_id": null,
+      "overview": "### Impact\n\nA high volume of exceptionally small fragments and data chunks can be sent by a peer, with modest network traffic, to force the remote peer into allocating and holding structural wrappers that consume far more memory than the default documented message-size limit, leading to process termination due to OOM.\n\n### Proof of concept\n\n```js\nimport { WebSocket, WebSocketServer } from 'ws';\n\nconst wss = new WebSocketServer({ port: 0 }, function () {\n  const data = Buffer.alloc(1);\n  const options = { fin: false };\n  const { port } = wss.address();\n  const ws = new WebSocket(`ws://localhost:${port}`);\n\n  ws.on('open', function () {\n    (function send() {\n      ws.send(data, options, function (err) {\n        if (err) return;\n        send();\n      });\n    })();\n  });\n\n  ws.on('error', console.error);\n  ws.on('close', function (code, reason) {\n    console.log(`client close - code: ${code} reason: ${reason.toString()}`);\n  });\n});\n\nwss.on('connection', function (ws) {\n  ws.on('error', console.error);\n  ws.on('close', function (code, reason) {\n    console.log(`server close - code: ${code} reason: ${reason.toString()}`);\n  });\n});\n```\n\n### Patches\n\nThe vulnerability was fixed in ws@8.21.0 (https://github.com/websockets/ws/commit/bca91adf15677e47dbe4f959653452727be28b94) and backported to ws@7.5.11 (https://github.com/websockets/ws/commit/fd36cd864fcdf62a08273a99e19a7d975401fee8), ws@6.2.4 (https://github.com/websockets/ws/commit/86d3e8a5fb0246ed373860c5fbb0de88824a27f7), and ws@5.2.5 (https://github.com/websockets/ws/commit/b5372ac67bb97a773727b8e9f5035a8123556d53).\n\n### Workarounds\n\nIn vulnerable versions, the issue can be mitigated by lowering the value of the `maxPayload` option if possible.\n\n### Credits\n\nThe vulnerability was responsibly disclosed and fixed by [Nadav Magier](https://github.com/Nadav0077).",
+      "reported_by": null,
+      "title": "ws: Memory exhaustion DoS from tiny fragments and data chunks",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-48779"
+      ],
+      "access": "public",
+      "severity": "high",
+      "module_name": "ws",
+      "vulnerable_versions": ">=8.0.0 <8.21.0",
+      "github_advisory_id": "GHSA-96hv-2xvq-fx4p",
+      "recommendation": "Upgrade to version 8.21.0 or later",
+      "patched_versions": ">=8.21.0",
+      "updated": "2026-07-13T15:31:39.000Z",
+      "cvss": {
+        "score": 7.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      },
+      "cwe": [
+        "CWE-400",
+        "CWE-770",
+        "CWE-1050"
+      ],
+      "url": "https://github.com/advisories/GHSA-96hv-2xvq-fx4p"
+    }
+  },
+  "muted": [],
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 3,
+      "moderate": 3,
+      "high": 4,
+      "critical": 0
+    },
+    "dependencies": 287,
+    "devDependencies": 0,
+    "optionalDependencies": 0,
+    "totalDependencies": 287
+  }
+}

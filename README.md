@@ -48,6 +48,24 @@ export CLOUDFLARE_API_TOKEN="token"
 npx wrangler whoami
 ```
 
+### Jetons (KV `AUTH`)
+
+Deux jetons distincts, deux droits distincts, stockés dans le même namespace KV :
+
+| Clé | Porteur | Donne le droit de |
+|---|---|---|
+| `API_TOKEN` | le flux Node-RED | ingérer un article (`POST /api/ingest`, en-tête `Authorization: Bearer`) |
+| `READ_TOKEN` | le dashboard | lire les articles et les statistiques (en-tête `X-Dashboard-Token`) |
+
+`READ_TOKEN` a été introduit par C18 : les routes de lecture répondaient auparavant à
+quiconque connaissait l'URL du Worker, laquelle est publique. `GET /api/stats/health` et la
+route de repli restent volontairement ouvertes — supervision hors session, aucune donnée
+rendue. Le dashboard doit porter la même valeur dans son secret `NUXT_WORKER_READ_TOKEN`.
+
+```bash
+npx wrangler kv key put --binding AUTH --remote READ_TOKEN "<valeur>"
+```
+
 ### Déploiement du Worker
 
 Automatique via GitHub Actions : chaque push sur `main` déclenche le job `deploy`
