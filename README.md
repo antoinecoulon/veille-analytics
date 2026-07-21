@@ -83,6 +83,10 @@ npx wrangler d1 create veille-analytics
 npx wrangler d1 migrations apply veille-analytics --remote
 ```
 
+`migrations/` ne contient que du **schéma**, applicable sans réfléchir sur tous les
+environnements ; les correctifs de **données** vivent dans `scripts/sql-ponctuels/` et se jouent
+un par un. La règle et ce qui l'a motivée sont dans [`migrations/README.md`](migrations/README.md).
+
 ### Agrégat décisionnel (`dim_date` + `agg_quotidien`)
 
 Le schéma est en étoile : `articles` est la table de faits, `dim_date` la dimension calendaire et

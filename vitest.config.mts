@@ -4,16 +4,15 @@ import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-worker
 export default defineConfig({
   plugins: [
     cloudflareTest(async () => {
-      // Schéma seul : on écarte les migrations de DONNÉES (dev seed, fixes ponctuels), qui
-      // fausseraient les assertions de comptage des tests d'intégration.
+      // Aucun filtre : `migrations/` ne contient que du schéma, les correctifs de données
+      // vivent dans scripts/sql-ponctuels/ (cf. migrations/README.md). Les tests d'intégration
+      // tournent donc sur exactement le schéma de production, index compris.
       //
-      // Le critère porte sur le marqueur `-dev` du nom de fichier plutôt que sur « 0001 »
-      // uniquement : filtrer par numéro écartait aussi les migrations de SCHÉMA ultérieures
-      // (0005_perf_indexes), et les tests auraient alors tourné sur un schéma différent de
-      // celui de la production — précisément ce qu'une suite d'intégration doit éviter.
-      const migrations = (await readD1Migrations("migrations")).filter(
-        (m) => !m.name.includes("-dev")
-      )
+      // Un filtre a existé ici, d'abord par numéro puis par marqueur de nom. Les deux
+      // dépendaient d'une convention de nommage que rien ne faisait respecter : le premier a
+      // silencieusement écarté une migration de schéma, le second aurait laissé passer un
+      // correctif de données mal nommé. Ranger les fichiers au bon endroit règle les deux.
+      const migrations = await readD1Migrations("migrations")
       return {
         wrangler: { configPath: "./wrangler.toml" },
         miniflare: {
