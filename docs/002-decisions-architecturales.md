@@ -171,3 +171,47 @@ Même dénouement que les trois fois précédentes (P1, P2, clôture des dettes 
 - **Le coût d'écriture des index n'a pas été mesuré.** Quatre index se maintiennent à chaque `INSERT` ; la création en a écrit 2 540 entrées. À une trentaine d'articles par passe le surcoût est négligeable devant le balayage supprimé, mais c'est un raisonnement, pas une mesure.
 - **`GET /api/stats/themes` reste le chemin le plus lourd** (3 118 lignes lues, `queryEfficiency` 0,003). Le développement de `json_each` interdit tout index. Le levier serait de le servir depuis `agg_quotidien`, déjà alimenté par thème et par jour — c'est-à-dire d'étendre à cet endpoint ce que D11 a fait pour la timeline. Identifié, non fait.
 - **La rétention de l'analytique Cloudflare est bornée** sur le plan gratuit : `wrangler d1 insights` regarde en arrière sur une fenêtre courte. Les sorties brutes sont donc versionnées dans `data/perf/` plutôt que régénérables à volonté — contrairement aux mesures `rows_read`, que `scripts/perf-measure.mjs` rejoue à tout moment.
+
+---
+
+## D14 — Trois couches d'analyse de sécurité en CI, et ce qu'elles ne couvrent pas
+
+**Date** : Juillet 2026
+**Contexte** : la sécurité du projet reposait sur des gestes ponctuels et corrects — secrets hors dépôt, configuration serveur non exposée au client, XSS corrigée, `rel="noopener noreferrer"` — mais sur aucun dispositif. Les deux pipelines vérifiaient les types, le style et les tests ; rien ne regardait les dépendances, l'historique git ni l'application déployée. Une hygiène sans outillage tient à la vigilance d'une personne, et ne survit pas à un mois d'interruption.
+**Décision** : trois couches qui ne cherchent pas la même chose, plutôt qu'un scanner généraliste de plus.
+- **`pnpm audit --audit-level=high`**, dans un job `security` distinct de `quality`, sur les deux dépôts. Compare l'arbre de dépendances **installé** à la base d'avis publics. Seuil `high` : un seuil plus bas rendrait le pipeline rouge en permanence pour des avis portant sur de l'outillage de développement, et un pipeline qu'on apprend à ignorer ne protège plus rien.
+- **`gitleaks` sur l'historique complet** (`fetch-depth: 0`). Un secret retiré par un commit ultérieur reste lisible dans les objets git : ne regarder que le dernier commit donnerait une réponse rassurante et fausse.
+- **OWASP ZAP en mode baseline** contre le dashboard déployé, dans un workflow séparé, déclenchable à la main et planifié le lundi. Séparé parce que sa cible est la **production**, pas le code de la branche : scanner à chaque commit mesurerait l'état d'une application qui n'a pas encore reçu ce commit. Baseline, donc exploration et analyse **passive** — aucune charge offensive, ce qui le rend acceptable contre une production.
+
+Le job `security` **ne bloque pas le déploiement** : `deploy` ne dépend que de `quality`. Un avis publié sur une dépendance de développement ne doit pas empêcher de livrer un correctif. Il rend le pipeline rouge, ce qui suffit à forcer le traitement.
+
+**Conséquence immédiate, et démenti du pronostic** : la mise en place devait, selon le plan, ne rien trouver — deux projets jeunes, peu de dépendances directes. Le premier passage a remonté **18 avis** : 10 sur `veille-analytics` (4 *high*, tous sous `wrangler` → `miniflare` : `undici`, `ws`, `esbuild`) et 8 sur `veille-dashboard` dont un **critique** (`tar`, dans la chaîne de construction de `nitropack`). Aucun n'était embarqué dans le code servi — tous relevaient de l'outillage de compilation — mais l'écart entre le pronostic et la mesure est le résultat le plus utile de l'opération : l'intuition sur l'état de sécurité d'un projet ne vaut pas son inventaire.
+
+Traitement : montée de `wrangler` 4.78 → 4.112 côté Worker, qui solde les dix d'un coup ; `pnpm.overrides` versionnés côté dashboard, où les paquets fautifs sont trop profonds pour être atteints autrement. **Piège rencontré** : une clé d'override de la forme `paquet@plage` se compare à la plage **déclarée** par le parent, pas à la version **résolue**. `brace-expansion@>=3.0.0 <5.0.7` ne s'appliquait donc pas à un parent déclarant `^5.0.0`, et l'audit restait rouge malgré un override en apparence correct ; il a fallu la forme `minimatch>brace-expansion`.
+
+**Ce que ces trois couches ne couvrent pas**, et qui doit être dit avant de lire leurs rapports :
+- **Aucune ne juge une autorisation.** Le constat le plus grave de cette campagne — des routes de lecture ouvertes à tous, cf. D15 — a été trouvé en lisant le routeur, pas par un outil. Pour ZAP, un endpoint qui répond 200 à tout le monde est un endpoint qui fonctionne.
+- **ZAP ne voit que la surface publique.** Le dashboard exigeant une session, l'exploration s'arrête à la page de connexion et aux assets.
+- **`pnpm audit` ne prouve pas une absence.** Il compare à des avis *publiés* ; une vulnérabilité non encore déclarée n'y figure pas. Un audit vert dit « rien de connu », jamais « rien ».
+
+**Écarté** : **CodeQL**, pourtant gratuit sur dépôt public — l'analyse statique recoupe largement ce que le typage strict et ESLint attrapent déjà sur ce code, et ajouter une quatrième source d'alertes avant d'avoir traité celles des trois premières produirait du bruit, pas de la sécurité. À reconsidérer une fois le rituel installé. **Burp Suite**, cité par le référentiel, est un outil d'analyse manuelle assistée : il n'a pas sa place dans une CI. **Le scan actif** de ZAP, qui injecte réellement des charges : refusé contre une production, et il n'existe pas d'environnement de recette où le pratiquer.
+
+---
+
+## D15 — Réserver les routes de lecture au dashboard, et non à l'obscurité de l'URL
+
+**Date** : Juillet 2026
+**Contexte** : la protection des données reposait entièrement sur `proxyToWorker`, côté dashboard, qui vérifie la session avant de relayer au Worker. Le raisonnement était juste et le code aussi — mais il supposait que l'on passe par le dashboard. Or le Worker répond sur sa propre URL publique, laquelle est versionnée en clair dans le `wrangler.toml` d'un dépôt public. Mesuré le 2026-07-21 : un `curl` sur `GET /api/articles`, sans en-tête d'aucune sorte, renvoyait **16 522 octets** d'articles. C'est la leçon de l'Étape 15 — « protéger l'UI ne suffit pas, il faut protéger la donnée » — qui n'avait été appliquée qu'à un seul étage.
+**Décision** : le Worker exige un jeton partagé, `X-Dashboard-Token`, sur ses routes de lecture ; le proxy du dashboard est le seul à l'émettre.
+- **Whitelist de chemins protégés, pas blacklist.** Une route absente de la liste est donc publique par défaut. Le choix est contre-intuitif et assumé : la liste inverse ferait passer pour protégée une route qu'on aurait simplement oublié d'y inscrire, c'est-à-dire qu'elle transformerait un oubli en fausse sécurité. Ici, l'oubli se voit.
+- **Jeton distinct de celui d'ingestion**, dans le même KV. Ingérer et lire ne sont pas le même droit et n'ont pas le même porteur ; les confondre reviendrait à donner l'écriture à qui ne demandait que la lecture.
+- **Un jeton absent du KV refuse tout.** La comparaison n'est pas gardée par un « si un jeton est configuré » : une erreur de configuration doit fermer, pas ouvrir. C'est testé.
+- **Deux exceptions volontaires et testées** : `GET /api/stats/health`, appelé hors session par la supervision et qui ne rend aucune donnée d'article, et la route de repli. Les tester empêche de les fermer par inadvertance en élargissant la liste — et de découvrir la panne par un indicateur devenu muet.
+
+**Ordre de déploiement, qui fait partie de la décision** : le dashboard d'abord, le Worker ensuite. Émettre un en-tête que personne n'exige encore est sans effet ; l'exiger avant que quiconque l'émette coupe la production. C'est le même réflexe que la désactivation du pipeline pendant une migration.
+
+**Conséquence** : la même requête renvoie désormais **401 et 13 octets**. L'indicateur de santé reste joignable, la production sert toujours ses 542 articles au dashboard authentifié.
+
+**Écarté** : **`workers_dev = false`**, qui supprimerait purement l'URL publique et serait la protection la plus forte, sans une ligne de code. Refusé pour deux raisons concrètes : la supervision HTTP de `/api/stats/health` deviendrait impossible depuis l'extérieur, et le développement local du dashboard, qui appelle le Worker par son URL faute de service binding hors production, cesserait de fonctionner. La protection la plus forte n'est pas la bonne si elle supprime le moyen de vérifier que le système va bien.
+
+**Limites assumées** : un jeton partagé authentifie un **appelant**, pas un **utilisateur**. Il ferme la porte ouverte, il ne remplace pas une autorisation par utilisateur — laquelle n'a pas d'objet ici, où toute session voit le même corpus. Par ailleurs le jeton vit dans le KV et dans un secret du dashboard : sa rotation est manuelle et non couverte par une procédure automatisée.
