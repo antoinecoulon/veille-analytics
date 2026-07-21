@@ -13,6 +13,8 @@ import { bornesDuJour, refreshAggregatesForDay } from "../src/lib/aggregates"
 // invariants de conception, en particulier que le rollup ne double-compte jamais.
 
 const TOKEN = "test-token"
+// Jeton de lecture (C18) : la timeline fait partie des routes réservées au dashboard.
+const READ_TOKEN = "test-read-token"
 
 beforeAll(async () => {
   await applyD1Migrations(env.DB, env.TEST_MIGRATIONS)
@@ -20,6 +22,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await env.AUTH.put("API_TOKEN", TOKEN)
+  await env.AUTH.put("READ_TOKEN", READ_TOKEN)
   await env.DB.exec("DELETE FROM articles")
   await env.DB.exec("DELETE FROM agg_quotidien")
   await env.DB.exec("DELETE FROM dim_date")
@@ -53,7 +56,11 @@ async function ingest(body: unknown): Promise<Response> {
 }
 
 function get(path: string): Promise<Response> {
-  return worker.fetch(new Request(`https://x${path}`), env, createExecutionContext())
+  return worker.fetch(
+    new Request(`https://x${path}`, { headers: { "X-Dashboard-Token": READ_TOKEN } }),
+    env,
+    createExecutionContext()
+  )
 }
 
 // Lignes de rollup : le total du jour, toutes thématiques confondues.
