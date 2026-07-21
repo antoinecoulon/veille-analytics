@@ -17,11 +17,24 @@
 // chemin d'écriture, à chaque ingestion. Mesuré en production le 2026-07-21 avant correction :
 // 542 lignes lues pour écrire 2 lignes de rollup (cf. data/perf/perf-avant.json et l'ADR D13).
 //
-// La comparaison lexicographique est ici équivalente à la comparaison de dates parce que
-// date_article est stocké en ISO 8601 (toIsoOrNull à l'ingestion, ADR D09) : tout horodatage du
-// jour J s'écrit « J » suivi d'un « T », donc se situe entre « J » inclus et « J+1 » exclu.
-// Condition MESURÉE en production le 2026-07-21, pas supposée : sur 542 articles, 0 date_article
-// nulle, 0 non analysable par strftime, 0 hors du format ISO.
+// C'est une comparaison de CHAÎNES. Elle n'équivaut à une comparaison de DATES qu'à une condition
+// précise : que date_article soit un ISO 8601 **UTC canonique**, la forme que produit toIsoOrNull
+// (`toISOString()`, ADR D09). Tout horodatage du jour J s'écrit alors « J » suivi d'un « T », donc
+// se situe entre « J » inclus et « J+1 » exclu.
+//
+// Le cas qui la met en défaut est le décalage horaire : `2026-06-30T00:30:00+02:00` vaut
+// 2026-06-29T22:30Z, donc strftime le classe au 29 et l'encadrement au 30. Une valeur pareille ne
+// peut pas venir de l'ingestion, mais rien n'empêche une écriture directe en base — c'est ainsi
+// qu'est arrivé l'historique migré.
+//
+// Condition MESURÉE en production le 2026-07-21, pas supposée : `strftime('%Y-%m-%dT%H:%M:%fZ',
+// date_article) IS NOT date_article` renvoie **0 sur 542**. Le contrôle est versionné et rejouable
+// (scripts/check-contrat-dates.sql) et sa capacité à détecter un décalage horaire est elle-même
+// testée (test/aggregates.test.ts, « la frontière du contrat de données »).
+//
+// Une première vérification, faite au moment de la réécriture, comptait les valeurs nulles, celles
+// que strftime refuse et celles ne respectant pas le préfixe AAAA-MM-JJ : juste, mais aveugle au
+// décalage horaire. Elle ne prouvait pas ce pour quoi elle était citée.
 //
 // Les deux bornes sont calculées en TypeScript et passées en paramètres — même répartition que
 // seuilRetardMl dans health.ts (« le SQL compte, le TypeScript juge ») : la définition d'un jour

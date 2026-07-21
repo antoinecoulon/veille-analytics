@@ -6,7 +6,7 @@ import {
 } from "cloudflare:test"
 import { beforeAll, beforeEach, afterEach, describe, it, expect, vi } from "vitest"
 import worker from "../src/index"
-import { bornesDuJour } from "../src/lib/aggregates"
+import { bornesDuJour, refreshAggregatesForDay } from "../src/lib/aggregates"
 
 // P1 (C27) — l'agrégat décisionnel (dim_date + agg_quotidien) est maintenu à l'écriture
 // par refreshAggregatesForDay et lu par GET /api/stats/timeline. Ces tests vérifient les
@@ -271,6 +271,83 @@ describe("Agrégat — équivalence de l'encadrement aux bornes du jour", () => 
     ).all()
 
     expect(roll).toEqual(strftimeVersion)
+  })
+})
+
+// Le test d'équivalence ci-dessus passe toutes ses dates par l'ingestion, donc par toIsoOrNull,
+// qui appelle toISOString() : elles sont UTC canoniques par construction, et l'encadrement ne peut
+// PAS y diverger de strftime. Autrement dit, il ne peut pas échouer — il vérifie que le SQL est
+// juste, pas que le contrat de données tient.
+//
+// Ces tests-ci écrivent DIRECTEMENT en base. C'est le seul moyen de produire une valeur hors
+// contrat, et c'est aussi par là que sont arrivées les lignes de l'historique migré.
+describe("Encadrement vs strftime — la frontière du contrat de données", () => {
+  async function insereDirect(url: string, dateArticle: string) {
+    await env.DB.prepare(
+      `INSERT INTO articles (titre, url, source, date_article, date_collecte, themes_mistral, score_mistral)
+       VALUES (?1, ?2, 'test', ?3, '2026-01-01T00:00:00.000Z', '["Architecture"]', 3)`
+    )
+      .bind(`Article ${url}`, url, dateArticle)
+      .run()
+  }
+
+  // La condition de scripts/check-contrat-dates.sql, rejouée ici pour prouver qu'elle détecte
+  // ce qu'elle prétend détecter. Toute évolution va aux deux endroits.
+  function compteHorsContrat() {
+    return env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM articles
+       WHERE strftime('%Y-%m-%dT%H:%M:%fZ', date_article) IS NOT date_article`
+    ).first<{ n: number }>()
+  }
+
+  it("coïncide avec strftime sur des valeurs UTC canoniques, aux deux bornes du jour", async () => {
+    await insereDirect("canon-minuit", "2026-01-15T00:00:00.000Z")
+    await insereDirect("canon-fin", "2026-01-15T23:59:59.999Z")
+    await insereDirect("canon-lendemain", "2026-01-16T00:00:00.000Z")
+    await refreshAggregatesForDay(env.DB, "2026-01-15")
+    await refreshAggregatesForDay(env.DB, "2026-01-16")
+
+    const { results: roll } = await rollups()
+    expect(roll.map((r) => [r.date, r.nb_articles])).toEqual([
+      ["2026-01-15", 2],
+      ["2026-01-16", 1]
+    ])
+    expect((await compteHorsContrat())?.n).toBe(0)
+  })
+
+  // LE test qui manquait. Il échouerait si quelqu'un « corrigeait » l'encadrement en croyant
+  // qu'il équivaut inconditionnellement à strftime.
+  it("diverge de strftime sur un horodatage à décalage horaire, et le contrôle le détecte", async () => {
+    // 2026-06-30T00:30:00+02:00 vaut 2026-06-29T22:30Z : strftime le classe au 29, la
+    // comparaison lexicographique au 30. C'est exactement le cas que le contrat exclut.
+    await insereDirect("decalage", "2026-06-30T00:30:00+02:00")
+
+    const { results: selonStrftime } = await env.DB.prepare(
+      "SELECT strftime('%Y-%m-%d', date_article) AS jour FROM articles WHERE url = 'decalage'"
+    ).all<{ jour: string }>()
+    expect(selonStrftime[0]?.jour).toBe("2026-06-29")
+
+    // L'encadrement, lui, le range au 30 : le 29 ne le voit pas.
+    await refreshAggregatesForDay(env.DB, "2026-06-29")
+    await refreshAggregatesForDay(env.DB, "2026-06-30")
+
+    const { results: roll } = await rollups()
+    expect(roll.map((r) => [r.date, r.nb_articles])).toEqual([["2026-06-30", 1]])
+
+    // Et c'est bien ce que le contrôle versionné signale — sans quoi il renverrait 0 pour de
+    // mauvaises raisons.
+    expect((await compteHorsContrat())?.n).toBe(1)
+  })
+
+  it("le contrôle ne compte pas une date absente : elle sort de l'agrégat, elle ne le fausse pas", async () => {
+    await insereDirect("sans-date", null as unknown as string)
+
+    expect((await compteHorsContrat())?.n).toBe(0)
+
+    const sansDate = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM articles WHERE date_article IS NULL"
+    ).first<{ n: number }>()
+    expect(sansDate?.n).toBe(1)
   })
 })
 
