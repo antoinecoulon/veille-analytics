@@ -1,0 +1,112 @@
+﻿[
+  {
+    "query": "\n        SELECT value AS theme, COUNT(*) AS count\n        FROM articles, json_each(articles.themes_mistral)\n        WHERE articles.themes_mistral IS NOT NULL\n        GROUP BY value\n        ORDER BY count DESC\n      ",
+    "avgRowsRead": 3041,
+    "totalRowsRead": 12164,
+    "avgRowsWritten": 0,
+    "totalRowsWritten": 0,
+    "avgDurationMs": 3.0797749999999997,
+    "totalDurationMs": 12.319099999999999,
+    "numberOfTimesRun": 4,
+    "queryEfficiency": 0.003288391976323578
+  },
+  {
+    "query": "SELECT\n       (SELECT MAX(date_collecte) FROM articles) AS derniere_ingestion,\n       (SELECT COUNT(*) FROM articles) AS total,\n       (SELECT COUNT(*) FROM articles\n         WHERE themes_ml IS NULL AND date_collecte < ?1) AS ml_en_retard,\n       (SELECT COUNT(*) FROM articles WHERE themes_ml = '[]') AS ml_sans_theme,\n       (SELECT COUNT(*) FROM articles WHERE themes_mistral IS NULL) AS mistral_manquants",
+    "avgRowsRead": 2645,
+    "totalRowsRead": 10580,
+    "avgRowsWritten": 0,
+    "totalRowsWritten": 0,
+    "avgDurationMs": 1.770425,
+    "totalDurationMs": 7.0817,
+    "numberOfTimesRun": 4,
+    "queryEfficiency": 0.0003780718336483932
+  },
+  {
+    "query": " SELECT     (SELECT MAX(date_collecte) FROM articles) AS derniere_ingestion,      CAST(julianday('now') - julianday((SELECT MAX(date_collecte) FROM articles)) AS INTEGER)         AS jours_depuis,      (SELECT COUNT(*) FROM articles) AS total,      (SELECT COUNT(*) FROM articles       WHERE themes_ml IS NULL         AND julianday('now') - julianday(date_collecte) > 1.0) AS ml_en_retard,      (SELECT COUNT(*) FROM articles WHERE themes_ml = '[]') AS ml_sans_theme,      (SELECT COUNT(*) FROM articles WHERE themes_mistral IS NULL) AS mistral_manquants,      CASE         WHEN (SELECT MAX(date_collecte) FROM articles) IS NULL THEN 'alerte'         WHEN julianday('now') - julianday((SELECT MAX(date_collecte) FROM articles)) < 4.0             THEN 'ok'         WHEN julianday('now') - julianday((SELECT MAX(date_collecte) FROM articles)) < 15.0             THEN 'degrade'         ELSE 'alerte'     END AS statut_collecte,      CASE         WHEN (SELECT COUNT(*) FROM articles                WHERE themes_ml IS NULL                  AND julianday('now') - julianday(date_collecte) > 1.0) > 0 THEN 'alerte'         ELSE 'ok'     END AS statut_classification;",
+    "avgRowsRead": 4761,
+    "totalRowsRead": 9522,
+    "avgRowsWritten": 0,
+    "totalRowsWritten": 0,
+    "avgDurationMs": 2.1071,
+    "totalDurationMs": 4.2142,
+    "numberOfTimesRun": 2,
+    "queryEfficiency": 0.00021003990758244065
+  },
+  {
+    "query": "INSERT INTO agg_quotidien (date, thematique, nb_articles, score_moyen)\n         SELECT ?1, NULL, COUNT(*), AVG(score_mistral)\n         FROM articles\n         WHERE strftime('%Y-%m-%d', date_article) = ?1\n         HAVING COUNT(*) > 0",
+    "avgRowsRead": 541,
+    "totalRowsRead": 8669,
+    "avgRowsWritten": 2,
+    "totalRowsWritten": 32,
+    "avgDurationMs": 0.35208124999999996,
+    "totalDurationMs": 5.633299999999999,
+    "numberOfTimesRun": 16,
+    "queryEfficiency": 0
+  },
+  {
+    "query": "DELETE FROM agg_quotidien WHERE date = ?1",
+    "avgRowsRead": 724,
+    "totalRowsRead": 7973,
+    "avgRowsWritten": 6,
+    "totalRowsWritten": 75,
+    "avgDurationMs": 0.11546363636363637,
+    "totalDurationMs": 1.2701,
+    "numberOfTimesRun": 11,
+    "queryEfficiency": 0
+  },
+  {
+    "query": "\n        SELECT source, COUNT(*) AS count\n        FROM articles\n        GROUP BY source\n        ORDER BY count DESC\n      ",
+    "avgRowsRead": 1014,
+    "totalRowsRead": 7099,
+    "avgRowsWritten": 0,
+    "totalRowsWritten": 0,
+    "avgDurationMs": 1.0293857142857143,
+    "totalDurationMs": 7.2057,
+    "numberOfTimesRun": 7,
+    "queryEfficiency": 0.01282051282051282
+  },
+  {
+    "query": "INSERT INTO agg_quotidien (date, thematique, nb_articles, score_moyen)\n         SELECT ?1, value, COUNT(*), AVG(score_mistral)\n         FROM articles, json_each(articles.themes_mistral)\n         WHERE strftime('%Y-%m-%d', date_article) = ?1 AND themes_mistral IS NOT NULL\n         GROUP BY value",
+    "avgRowsRead": 567,
+    "totalRowsRead": 5107,
+    "avgRowsWritten": 6,
+    "totalRowsWritten": 60,
+    "avgDurationMs": 0.6681333333333334,
+    "totalDurationMs": 6.0132,
+    "numberOfTimesRun": 9,
+    "queryEfficiency": 0
+  },
+  {
+    "query": "SELECT (SELECT COUNT(*) FROM articles WHERE tags IS NOT NULL AND tags != '[]') AS avec_tags, (SELECT COUNT(DISTINCT value) FROM articles, json_each(articles.tags)) AS tags_distincts, (SELECT MIN(date_article) FROM articles) AS date_min, (SELECT MAX(date_article) FROM articles) AS date_max, (SELECT COUNT(*) FROM articles WHERE date_article IS NULL) AS sans_date",
+    "avgRowsRead": 5009,
+    "totalRowsRead": 5009,
+    "avgRowsWritten": 0,
+    "totalRowsWritten": 0,
+    "avgDurationMs": 2.4863,
+    "totalDurationMs": 2.4863,
+    "numberOfTimesRun": 1,
+    "queryEfficiency": 0.00019964064683569574
+  },
+  {
+    "query": "SELECT * FROM articles  ORDER BY date_article DESC, date_collecte DESC LIMIT ? OFFSET ?",
+    "avgRowsRead": 994,
+    "totalRowsRead": 4972,
+    "avgRowsWritten": 0,
+    "totalRowsWritten": 0,
+    "avgDurationMs": 1.8632600000000004,
+    "totalDurationMs": 9.316300000000002,
+    "numberOfTimesRun": 5,
+    "queryEfficiency": 0.012072434607645875
+  },
+  {
+    "query": " SELECT     (SELECT MAX(date_collecte) FROM articles) AS dernier_article_collecte,      CAST(julianday('now') - julianday((SELECT MAX(date_collecte) FROM articles)) AS INTEGER)         AS jours_depuis,      (SELECT COUNT(*) FROM articles) AS total,      (SELECT COUNT(*) FROM articles       WHERE themes_ml IS NULL         AND julianday('now') - julianday(date_collecte) > 1.0) AS ml_en_retard,      (SELECT COUNT(*) FROM articles WHERE themes_ml = '[]') AS ml_sans_theme,      (SELECT COUNT(*) FROM articles WHERE themes_mistral IS NULL) AS mistral_manquants,      CASE         WHEN (SELECT MAX(date_collecte) FROM articles) IS NULL THEN 'alerte'         WHEN julianday('now') - julianday((SELECT MAX(date_collecte) FROM articles)) < 4.0             THEN 'ok'         WHEN julianday('now') - julianday((SELECT MAX(date_collecte) FROM articles)) < 15.0             THEN 'degrade'         ELSE 'alerte'     END AS statut_collecte,      CASE         WHEN (SELECT COUNT(*) FROM articles                WHERE themes_ml IS NULL                  AND julianday('now') - julianday(date_collecte) > 1.0) > 0 THEN 'alerte'         ELSE 'ok'     END AS statut_classification;",
+    "avgRowsRead": 4761,
+    "totalRowsRead": 4761,
+    "avgRowsWritten": 0,
+    "totalRowsWritten": 0,
+    "avgDurationMs": 3.2772,
+    "totalDurationMs": 3.2772,
+    "numberOfTimesRun": 1,
+    "queryEfficiency": 0.00021003990758244065
+  }
+]

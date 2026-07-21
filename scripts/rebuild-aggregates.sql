@@ -14,6 +14,15 @@
 -- aux deux endroits — même convention que le contrat ML entre src/lib/classifyMl.ts et
 -- scripts/classify-ml.mjs.
 --
+-- DIVERGENCE ASSUMÉE depuis C24, à ne pas prendre pour un oubli : aggregates.ts a remplacé
+-- `strftime('%Y-%m-%d', date_article) = ?` par un encadrement `>= ? AND < ?` pour redevenir
+-- indexable. Ici, strftime n'est pas un FILTRE sur un jour mais la CLÉ DE REGROUPEMENT de tous
+-- les jours : la reconstruction lit l'intégralité de la table par nature, aucun index ne peut
+-- l'éviter, et l'encadrement n'aurait pas de sens (il n'y a pas de jour à encadrer). Les deux
+-- fichiers restent donc équivalents en RÉSULTAT — ce que vérifie le test
+-- « produit exactement le même agrégat que l'ancienne expression strftime »
+-- (test/aggregates.test.ts) — sans être identiques en forme.
+--
 -- La table articles n'est JAMAIS écrite par ce script.
 
 DELETE FROM agg_quotidien;

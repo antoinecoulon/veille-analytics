@@ -6,6 +6,7 @@ import {
 } from "cloudflare:test"
 import { beforeAll, beforeEach, afterEach, describe, it, expect, vi } from "vitest"
 import worker from "../src/index"
+import { bornesDuJour } from "../src/lib/aggregates"
 
 // P1 (C27) — l'agrégat décisionnel (dim_date + agg_quotidien) est maintenu à l'écriture
 // par refreshAggregatesForDay et lu par GET /api/stats/timeline. Ces tests vérifient les
@@ -165,6 +166,79 @@ describe("Agrégat — alimentation à l'ingestion", () => {
 
     const dim = await env.DB.prepare("SELECT COUNT(*) AS n FROM dim_date").first<{ n: number }>()
     expect(dim?.n).toBe(0)
+  })
+})
+
+// C24 — la sélection du jour est passée de `strftime('%Y-%m-%d', date_article) = ?` à un
+// encadrement `date_article >= ? AND date_article < ?`, pour redevenir indexable. Le gain est
+// mesuré ailleurs (data/perf/) ; ce qui se teste ici, c'est que l'équivalence tient sur les
+// bornes — seul vrai risque de la réécriture.
+describe("bornesDuJour — calcul des bornes d'un jour", () => {
+  it("encadre le jour par le jour suivant", () => {
+    expect(bornesDuJour("2026-06-29")).toEqual(["2026-06-29", "2026-06-30"])
+  })
+
+  it("franchit correctement un changement de mois", () => {
+    expect(bornesDuJour("2026-01-31")).toEqual(["2026-01-31", "2026-02-01"])
+  })
+
+  it("franchit correctement un changement d'année", () => {
+    expect(bornesDuJour("2026-12-31")).toEqual(["2026-12-31", "2027-01-01"])
+  })
+
+  it("gère le 29 février d'une année bissextile", () => {
+    expect(bornesDuJour("2028-02-29")).toEqual(["2028-02-29", "2028-03-01"])
+  })
+
+  it("gère le 28 février d'une année non bissextile", () => {
+    expect(bornesDuJour("2026-02-28")).toEqual(["2026-02-28", "2026-03-01"])
+  })
+
+  it("rejette un jour non analysable au lieu de produire des bornes silencieusement fausses", () => {
+    expect(() => bornesDuJour("pas-une-date")).toThrow(/Jour invalide/)
+  })
+})
+
+describe("Agrégat — équivalence de l'encadrement aux bornes du jour", () => {
+  it("inclut les articles à minuit et à la dernière milliseconde du jour", async () => {
+    await ingest({ ...base, link: "https://example.com/minuit", date: "2026-01-15T00:00:00.000Z" })
+    await ingest({ ...base, link: "https://example.com/fin", date: "2026-01-15T23:59:59.999Z" })
+
+    const { results: roll } = await rollups()
+    expect(roll).toEqual([{ date: "2026-01-15", nb_articles: 2, score_moyen: 3 }])
+  })
+
+  it("n'attire pas dans le jour l'article de minuit du lendemain", async () => {
+    await ingest({ ...base, link: "https://example.com/veille", date: "2026-01-15T23:59:59.999Z" })
+    await ingest({ ...base, link: "https://example.com/lendemain", date: "2026-01-16T00:00:00.000Z" })
+
+    const { results: roll } = await rollups()
+    expect(roll).toEqual([
+      { date: "2026-01-15", nb_articles: 1, score_moyen: 3 },
+      { date: "2026-01-16", nb_articles: 1, score_moyen: 3 }
+    ])
+  })
+
+  it("produit exactement le même agrégat que l'ancienne expression strftime", async () => {
+    // Cas volontairement variés : date seule, bornes du jour, jours et mois différents.
+    await ingest({ ...base, link: "https://example.com/1", date: "2026-01-15" })
+    await ingest({ ...base, link: "https://example.com/2", date: "2026-01-15T00:00:00.000Z" })
+    await ingest({ ...base, link: "https://example.com/3", date: "2026-01-15T23:59:59.999Z" })
+    await ingest({ ...base, link: "https://example.com/4", date: "2026-01-16T12:00:00.000Z" })
+    await ingest({ ...base, link: "https://example.com/5", date: "2026-02-01T08:30:00.000Z" })
+    await ingest({ ...base, link: "https://example.com/6", date: undefined })
+
+    const { results: roll } = await rollups()
+
+    // La version d'avant C24, rejouée telle quelle sur la table de faits.
+    const { results: strftimeVersion } = await env.DB.prepare(
+      `SELECT strftime('%Y-%m-%d', date_article) AS date, COUNT(*) AS nb_articles,
+              AVG(score_mistral) AS score_moyen
+       FROM articles WHERE date_article IS NOT NULL
+       GROUP BY date ORDER BY date`
+    ).all()
+
+    expect(roll).toEqual(strftimeVersion)
   })
 })
 

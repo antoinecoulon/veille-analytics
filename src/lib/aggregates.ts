@@ -10,9 +10,37 @@
 // filtré). Toute évolution doit être répercutée aux deux endroits — même convention que
 // le contrat ML entre src/lib/classifyMl.ts et scripts/classify-ml.mjs.
 
-// date_article est stocké en ISO (toIsoOrNull à l'ingestion) ; strftime renvoie NULL sur
-// une valeur non analysable, ces lignes ne matchent alors jamais un jour donné.
-const JOUR = "strftime('%Y-%m-%d', date_article)"
+// Sélection du jour par ENCADREMENT plutôt que par `strftime('%Y-%m-%d', date_article) = ?`.
+//
+// L'expression strftime s'applique à chaque ligne : elle est non sargable, donc aucun index sur
+// date_article ne peut être utilisé, et le filtre coûte un balayage complet de la table — sur le
+// chemin d'écriture, à chaque ingestion. Mesuré en production le 2026-07-21 avant correction :
+// 542 lignes lues pour écrire 2 lignes de rollup (cf. data/perf/perf-avant.json et l'ADR D13).
+//
+// La comparaison lexicographique est ici équivalente à la comparaison de dates parce que
+// date_article est stocké en ISO 8601 (toIsoOrNull à l'ingestion, ADR D09) : tout horodatage du
+// jour J s'écrit « J » suivi d'un « T », donc se situe entre « J » inclus et « J+1 » exclu.
+// Condition MESURÉE en production le 2026-07-21, pas supposée : sur 542 articles, 0 date_article
+// nulle, 0 non analysable par strftime, 0 hors du format ISO.
+//
+// Les deux bornes sont calculées en TypeScript et passées en paramètres — même répartition que
+// seuilRetardMl dans health.ts (« le SQL compte, le TypeScript juge ») : la définition d'un jour
+// reste à un seul endroit, testable sans D1.
+const JOUR_ENCADRE = "date_article >= ?2 AND date_article < ?3"
+
+/**
+ * Bornes `[début, fin[` du jour `YYYY-MM-DD`, au format directement comparable à date_article.
+ *
+ * La borne haute est le jour suivant, calculé en UTC — jamais `jour + 'T99'` ou un artifice du
+ * même genre : le passage de mois ou d'année doit être juste, y compris les années bissextiles.
+ */
+export function bornesDuJour(jour: string): [string, string] {
+  const debut = Date.parse(`${jour}T00:00:00.000Z`)
+  if (Number.isNaN(debut)) {
+    throw new Error(`Jour invalide (attendu YYYY-MM-DD) : ${jour}`)
+  }
+  return [jour, new Date(debut + 86_400_000).toISOString().slice(0, 10)]
+}
 
 /**
  * Recalcule intégralement l'agrégat d'un jour (format `YYYY-MM-DD`).
@@ -22,6 +50,8 @@ const JOUR = "strftime('%Y-%m-%d', date_article)"
  * dénominateur. Le coût est négligeable (quelques articles par jour).
  */
 export async function refreshAggregatesForDay(db: D1Database, jour: string): Promise<void> {
+  const [debut, fin] = bornesDuJour(jour)
+
   await db.batch([
     // Dimension calendaire. date_complete est UNIQUE : OR IGNORE rend l'appel idempotent.
     db
@@ -43,10 +73,10 @@ export async function refreshAggregatesForDay(db: D1Database, jour: string): Pro
         `INSERT INTO agg_quotidien (date, thematique, nb_articles, score_moyen)
          SELECT ?1, value, COUNT(*), AVG(score_mistral)
          FROM articles, json_each(articles.themes_mistral)
-         WHERE ${JOUR} = ?1 AND themes_mistral IS NOT NULL
+         WHERE ${JOUR_ENCADRE} AND themes_mistral IS NOT NULL
          GROUP BY value`
       )
-      .bind(jour),
+      .bind(jour, debut, fin),
 
     // Ligne de rollup (thematique NULL) = total du jour, toutes thématiques confondues.
     // Calculée SANS la jointure json_each : sommer les lignes par thème double-compterait
@@ -58,9 +88,9 @@ export async function refreshAggregatesForDay(db: D1Database, jour: string): Pro
         `INSERT INTO agg_quotidien (date, thematique, nb_articles, score_moyen)
          SELECT ?1, NULL, COUNT(*), AVG(score_mistral)
          FROM articles
-         WHERE ${JOUR} = ?1
+         WHERE ${JOUR_ENCADRE}
          HAVING COUNT(*) > 0`
       )
-      .bind(jour)
+      .bind(jour, debut, fin)
   ])
 }
