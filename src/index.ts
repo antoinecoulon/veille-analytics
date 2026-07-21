@@ -3,6 +3,7 @@ import { classifyArticle } from "./lib/classifyMl"
 import { computeMlComparison, type MlComparisonRow } from "./lib/mlComparison"
 import { refreshAggregatesForDay } from "./lib/aggregates"
 import { computeHealth, seuilRetardMl, type HealthRow } from "./lib/health"
+import { withSecurityHeaders } from "./lib/securityHeaders"
 
 export interface Env {
   DB: D1Database;
@@ -11,40 +12,47 @@ export interface Env {
 }
 
 export default {
+  // Le routage est délégué à `route` ; ce point d'entrée ne fait qu'appliquer les
+  // en-têtes de sécurité à ce qui en sort, quelle que soit la branche empruntée —
+  // y compris les 401, 403 et 500, qui sont des réponses comme les autres.
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url)
-
-    if (request.method === "POST" && url.pathname === "/api/ingest") {
-      return handleDigest(request, env, ctx)
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/articles") {
-      const params = url.searchParams
-      return fetchArticles(params, env)
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/stats/themes") {
-      return fetchArticlesCountByTheme(env)
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/stats/sources") {
-      return fetchArticlesCountBySource(env)
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/stats/timeline") {
-      return fetchArticlesTimeline(env)
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/stats/ml-comparison") {
-      return fetchMlComparison(env)
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/stats/health") {
-      return fetchHealth(env)
-    }
-    
-    return new Response("VeilleAnalytics API - OK");
+    return withSecurityHeaders(await route(request, env, ctx))
   }
+}
+
+async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const url = new URL(request.url)
+
+  if (request.method === "POST" && url.pathname === "/api/ingest") {
+    return handleDigest(request, env, ctx)
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/articles") {
+    const params = url.searchParams
+    return fetchArticles(params, env)
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/stats/themes") {
+    return fetchArticlesCountByTheme(env)
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/stats/sources") {
+    return fetchArticlesCountBySource(env)
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/stats/timeline") {
+    return fetchArticlesTimeline(env)
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/stats/ml-comparison") {
+    return fetchMlComparison(env)
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/stats/health") {
+    return fetchHealth(env)
+  }
+
+  return new Response("VeilleAnalytics API - OK")
 }
 
 async function handleDigest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {

@@ -265,3 +265,39 @@ describe("GET /api/stats/*", () => {
     expect(body.data).toEqual([{ jour: "2026-01-15", count: 1 }])
   })
 })
+
+// En-têtes de sécurité (C18). Le point testé n'est pas « la fonction pose bien les
+// en-têtes » — ce serait tester la fonction contre elle-même — mais « AUCUNE réponse du
+// Worker n'y échappe », y compris les chemins d'erreur et la route de repli. C'est
+// précisément la propriété qu'une application au cas par cas finirait par perdre.
+describe("En-têtes de sécurité sur toutes les réponses", () => {
+  const attendus = {
+    "X-Content-Type-Options": "nosniff",
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+    "Referrer-Policy": "no-referrer",
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains"
+  }
+
+  it.each([
+    ["route de repli", () => get("/")],
+    ["lecture d'articles", () => get("/api/articles")],
+    ["statistiques", () => get("/api/stats/themes")],
+    ["indicateur de santé", () => get("/api/stats/health")]
+  ])("%s", async (_libelle, appel) => {
+    const res = await appel()
+    for (const [nom, valeur] of Object.entries(attendus)) {
+      expect(res.headers.get(nom)).toBe(valeur)
+    }
+  })
+
+  it("un refus d'authentification les porte aussi", async () => {
+    const res = await ingest(article, null)
+    expect(res.status).toBe(401)
+    expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff")
+  })
+
+  it("le Content-Type d'origine n'est pas écrasé", async () => {
+    const res = await get("/api/stats/themes")
+    expect(res.headers.get("Content-Type")).toContain("application/json")
+  })
+})
