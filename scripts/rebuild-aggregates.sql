@@ -18,10 +18,15 @@
 -- `strftime('%Y-%m-%d', date_article) = ?` par un encadrement `>= ? AND < ?` pour redevenir
 -- indexable. Ici, strftime n'est pas un FILTRE sur un jour mais la CLÉ DE REGROUPEMENT de tous
 -- les jours : la reconstruction lit l'intégralité de la table par nature, aucun index ne peut
--- l'éviter, et l'encadrement n'aurait pas de sens (il n'y a pas de jour à encadrer). Les deux
--- fichiers restent donc équivalents en RÉSULTAT — ce que vérifie le test
--- « produit exactement le même agrégat que l'ancienne expression strftime »
--- (test/aggregates.test.ts) — sans être identiques en forme.
+-- l'éviter, et l'encadrement n'aurait pas de sens (il n'y a pas de jour à encadrer).
+--
+-- Les deux fichiers produisent donc le même résultat **tant que `date_article` respecte son
+-- contrat** : un ISO 8601 UTC canonique. Sur un horodatage à décalage horaire ils divergeraient,
+-- ce script (strftime) convertissant en UTC là où l'encadrement compare des chaînes. Le contrat
+-- est contrôlé par scripts/check-contrat-dates.sql (0 écart sur 542 en production le 2026-07-21)
+-- et la divergence est démontrée par test (test/aggregates.test.ts, « la frontière du contrat de
+-- données »). À garder en tête si cette reconstruction et l'agrégat incrémental venaient un jour
+-- à ne pas concorder : chercher d'abord une ligne hors contrat.
 --
 -- La table articles n'est JAMAIS écrite par ce script.
 
