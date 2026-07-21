@@ -1,0 +1,122 @@
+{
+  "label": "avant",
+  "cible": "remote",
+  "mesure_le": "2026-07-21T07:22:08.292Z",
+  "jour_reference": "2026-06-29",
+  "articles_en_base": 542,
+  "mesures": [
+    {
+      "nom": "agg_jour_themes",
+      "origine": "src/lib/aggregates.ts — INSERT ... SELECT par thème",
+      "chemin": "écriture (chaque ingestion)",
+      "sql": "SELECT '2026-06-29', value, COUNT(*), AVG(score_mistral) FROM articles, json_each(articles.themes_mistral) WHERE strftime('%Y-%m-%d', date_article) = '2026-06-29' AND themes_mistral IS NOT NULL GROUP BY value",
+      "plan": [
+        "SCAN articles",
+        "SCAN json_each VIRTUAL TABLE INDEX 1:",
+        "USE TEMP B-TREE FOR GROUP BY"
+      ],
+      "rows_read": 616,
+      "rows_written": 0,
+      "duration_ms": 0.7513,
+      "lignes_rendues": 8
+    },
+    {
+      "nom": "agg_jour_rollup",
+      "origine": "src/lib/aggregates.ts — INSERT ... SELECT de la ligne de rollup",
+      "chemin": "écriture (chaque ingestion)",
+      "sql": "SELECT '2026-06-29', NULL, COUNT(*), AVG(score_mistral) FROM articles WHERE strftime('%Y-%m-%d', date_article) = '2026-06-29' HAVING COUNT(*) > 0",
+      "plan": [
+        "SCAN articles"
+      ],
+      "rows_read": 542,
+      "rows_written": 0,
+      "duration_ms": 0.5672,
+      "lignes_rendues": 1
+    },
+    {
+      "nom": "agg_delete_jour",
+      "origine": "src/lib/aggregates.ts — DELETE du jour avant recalcul",
+      "chemin": "écriture (chaque ingestion)",
+      "sql": "DELETE FROM agg_quotidien WHERE date = '2026-06-29'",
+      "plan": [
+        "SCAN agg_quotidien"
+      ],
+      "rows_read": null,
+      "rows_written": null,
+      "duration_ms": null,
+      "lignes_rendues": null
+    },
+    {
+      "nom": "articles_liste",
+      "origine": "src/index.ts — fetchArticles, première page sans filtre",
+      "chemin": "lecture (GET /api/articles)",
+      "sql": "SELECT * FROM articles ORDER BY date_article DESC, date_collecte DESC LIMIT 20 OFFSET 0",
+      "plan": [
+        "SCAN articles",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "rows_read": 1084,
+      "rows_written": 0,
+      "duration_ms": 1.9909,
+      "lignes_rendues": 20
+    },
+    {
+      "nom": "timeline",
+      "origine": "src/index.ts — fetchArticlesTimeline",
+      "chemin": "lecture (GET /api/stats/timeline)",
+      "sql": "SELECT date AS jour, nb_articles AS count FROM agg_quotidien WHERE thematique IS NULL ORDER BY date ASC",
+      "plan": [
+        "SCAN agg_quotidien",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "rows_read": 862,
+      "rows_written": 0,
+      "duration_ms": 0.4393,
+      "lignes_rendues": 136
+    },
+    {
+      "nom": "stats_themes",
+      "origine": "src/index.ts — fetchArticlesCountByTheme",
+      "chemin": "lecture (GET /api/stats/themes)",
+      "sql": "SELECT value AS theme, COUNT(*) AS count FROM articles, json_each(articles.themes_mistral) WHERE articles.themes_mistral IS NOT NULL GROUP BY value ORDER BY count DESC",
+      "plan": [
+        "SCAN articles",
+        "SCAN json_each VIRTUAL TABLE INDEX 1:",
+        "USE TEMP B-TREE FOR GROUP BY",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "rows_read": 3118,
+      "rows_written": 0,
+      "duration_ms": 1.154,
+      "lignes_rendues": 10
+    },
+    {
+      "nom": "stats_sources",
+      "origine": "src/index.ts — fetchArticlesCountBySource",
+      "chemin": "lecture (GET /api/stats/sources)",
+      "sql": "SELECT source, COUNT(*) AS count FROM articles GROUP BY source ORDER BY count DESC",
+      "plan": [
+        "SCAN articles",
+        "USE TEMP B-TREE FOR GROUP BY",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "rows_read": 1097,
+      "rows_written": 0,
+      "duration_ms": 0.8447,
+      "lignes_rendues": 13
+    },
+    {
+      "nom": "ml_comparison",
+      "origine": "src/index.ts — fetchMlComparison (témoin, non optimisable)",
+      "chemin": "lecture (GET /api/stats/ml-comparison)",
+      "sql": "SELECT themes_mistral, themes_ml FROM articles",
+      "plan": [
+        "SCAN articles"
+      ],
+      "rows_read": 542,
+      "rows_written": 0,
+      "duration_ms": 2.0799,
+      "lignes_rendues": 542
+    }
+  ]
+}
