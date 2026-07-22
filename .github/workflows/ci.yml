@@ -91,9 +91,9 @@ jobs:
           fetch-depth: 0
 
       # Action officielle SonarQube/SonarCloud (config dans sonar-project.properties).
-      # Version à confirmer aux docs SonarCloud au moment du câblage : l'ancienne
-      # `SonarSource/sonarcloud-github-action` est dépréciée au profit de celle-ci.
-      - uses: SonarSource/sonarqube-scan-action@v5
+      # Épinglée au SHA complet plutôt qu'au tag mobile `v5` : un tag peut être redéplacé
+      # vers un autre commit, un SHA est immuable — durcissement de la chaîne d'appro CI.
+      - uses: SonarSource/sonarqube-scan-action@2f77a1ec69fb1d595b06f35ab27e97605bdef703 # v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io

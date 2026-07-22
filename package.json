@@ -17,7 +17,10 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "workerd"
-    ]
+    ],
+    "overrides": {
+      "sharp": ">=0.35.0"
+    }
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.18.4",
