@@ -1,5 +1,7 @@
 # VeilleAnalytics
 
+[![CI](https://github.com/antoinecoulon/veille-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/antoinecoulon/veille-analytics/actions/workflows/ci.yml)
+
 Pipeline de veille technologique automatisé avec analytics et classification ML.
 
 ## Qu'est-ce que c'est ?
