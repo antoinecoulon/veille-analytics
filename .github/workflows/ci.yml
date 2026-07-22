@@ -72,6 +72,32 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # Analyse de qualité de code (C19). SonarCloud : bugs, code smells, duplication et
+  # quality gate persistante — la dimension que ESLint + tsc (job `quality`) ne couvrent
+  # pas. Job séparé et NON bloquant pour le déploiement (`deploy` ne dépend que de
+  # `quality`), même principe que le job `security` : un manquement de qualité rend le
+  # pipeline rouge sans empêcher de livrer un correctif. Choix tracé en ADR D17.
+  #
+  # Prérequis de câblage : compte SonarCloud lié au dépôt + secret `SONAR_TOKEN` posé dans
+  # les secrets GitHub Actions. Tant que le secret est absent, ce job échoue — c'est voulu :
+  # il n'a de sens qu'une fois SonarCloud connecté.
+  sonar:
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 — SonarCloud date le « new code » à partir de l'historique complet ;
+      # un checkout superficiel fausse la quality gate sur le code récent.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Action officielle SonarQube/SonarCloud (config dans sonar-project.properties).
+      # Version à confirmer aux docs SonarCloud au moment du câblage : l'ancienne
+      # `SonarSource/sonarcloud-github-action` est dépréciée au profit de celle-ci.
+      - uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+
   deploy:
     needs: quality
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'

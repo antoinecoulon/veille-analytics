@@ -1,0 +1,8 @@
+# Normalisation des fins de ligne. Le dépôt est cloné aussi bien sous Windows
+# (poste de rédaction) que sous WSL/Linux (exécution du batch Spark). Sans règle
+# explicite, un checkout Windows peut réécrire les scripts shell en CRLF, ce qui
+# casse le shebang côté WSL (`/usr/bin/env bash^M: No such file or directory`).
+* text=auto
+
+# Les scripts shell doivent rester en LF quel que soit l'OS de checkout.
+*.sh text eol=lf

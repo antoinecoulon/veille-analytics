@@ -37,7 +37,28 @@ dépendre d'`ensurepip`. `uv pip install` fonctionne ensuite normalement dans ce
 
 ## Pipeline d'exécution
 
-Trois étapes, à lancer depuis la **racine du repo** :
+### En une commande (recommandé)
+
+Le script `scripts/run-spark-batch.sh` enchaîne les trois étapes ci-dessous, avec
+garde d'environnement (`CLOUDFLARE_API_TOKEN`, venv présent) et arrêt au premier
+échec (`set -euo pipefail`). À lancer depuis la **racine du repo** :
+
+```bash
+pnpm spark:batch                       # pipeline complet (export D1 inclus)
+# ou directement :
+bash scripts/run-spark-batch.sh
+bash scripts/run-spark-batch.sh --skip-export   # rejoue conversion + Spark sur le JSON déjà exporté (hors-ligne, sans token)
+bash scripts/run-spark-batch.sh --help
+```
+
+Le venv `spark/.venv` doit exister au préalable (voir *Setup* ci-dessus) ;
+`CLOUDFLARE_API_TOKEN` doit être exporté dans l'environnement pour l'étape d'export.
+Choix de conception : ADR **D16** dans `docs/002-decisions-architecturales.md`.
+
+### Les trois étapes détaillées
+
+Ce que le script automatise, si on veut les lancer une à une (toujours depuis la
+racine du repo) :
 
 ```bash
 # 1. Export D1 → JSON (colonnes utiles au batch)

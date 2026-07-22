@@ -6,7 +6,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "spark:batch": "bash scripts/run-spark-batch.sh"
   },
   "keywords": [],
   "author": "",
