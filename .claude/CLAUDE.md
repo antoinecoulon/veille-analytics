@@ -1,4 +1,4 @@
-# CLAUDE.md — veille-analytics (Worker Cloudflare + D1)
+﻿# CLAUDE.md — veille-analytics (Worker Cloudflare + D1)
 
 Backend du projet **VeilleAnalytics** : ingestion, stockage et exposition d'articles de veille
 technologique, avec double classification thématique (Mistral + ML).
@@ -44,7 +44,7 @@ Le repo est **CommonJS** → tout nouveau script Node va en `.mjs` (ESM explicit
 ```bash
 pnpm typecheck        # tsc --noEmit
 pnpm lint             # eslint
-pnpm test             # vitest run (73 tests)
+pnpm test             # vitest run (140 tests / 7 fichiers, 2026-07-23)
 npx wrangler deploy   # déploiement manuel (normalement fait par la CI)
 npx wrangler tail veille-analytics   # logs prod — outil de diagnostic n°1
 ```

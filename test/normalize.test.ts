@@ -61,4 +61,39 @@ describe("parseArticleRow", () => {
       tags: []
     })
   })
+
+  it("distingue '[]' de NULL : classifié sans thème au seuil n'est pas non classifié", () => {
+    const row = { id: 3, themes_mistral: "[]", themes_ml: "[]", tags: "[]" }
+    const parsed = parseArticleRow(row)
+    expect(parsed.themes_ml).toEqual([])
+    expect(parsed.themes_ml).not.toBeNull()
+  })
+
+  // Une valeur illisible faisait tomber TOUTE la page en 500, sans indiquer l'article en
+  // cause. La base a reçu des écritures directes (migration, correctifs ponctuels) et rien au
+  // niveau du schéma ne contraint le format de ces colonnes TEXT.
+  it.each([
+    ["du JSON tronqué", '["ia"'],
+    ["du texte brut", "ia, web"],
+    ["un objet JSON valide mais hors contrat", '{"theme":"ia"}'],
+    ["un scalaire JSON", "42"]
+  ])("dégrade %s en valeur par défaut au lieu de lever", (_libelle, brut) => {
+    const row = { id: 4, themes_mistral: brut, themes_ml: brut, tags: brut }
+    expect(() => parseArticleRow(row)).not.toThrow()
+    const parsed = parseArticleRow(row)
+    expect(parsed.themes_mistral).toEqual([])
+    expect(parsed.tags).toEqual([])
+    // Repli assumé : corrompu devient indiscernable de « jamais classifié » sur ce champ.
+    expect(parsed.themes_ml).toBeNull()
+  })
+
+  it("laisse intactes les colonnes qui ne sont pas du JSON", () => {
+    const row = { id: 5, titre: "Titre", url: "https://exemple", score_mistral: 3 }
+    expect(parseArticleRow(row)).toMatchObject({
+      id: 5,
+      titre: "Titre",
+      url: "https://exemple",
+      score_mistral: 3
+    })
+  })
 })

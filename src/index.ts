@@ -4,6 +4,7 @@ import { computeMlComparison, type MlComparisonRow } from "./lib/mlComparison"
 import { refreshAggregatesForDay } from "./lib/aggregates"
 import { computeHealth, seuilRetardMl, type HealthRow } from "./lib/health"
 import { withSecurityHeaders } from "./lib/securityHeaders"
+import { jetonsEgaux } from "./lib/jetons"
 
 export interface Env {
   DB: D1Database;
@@ -53,9 +54,9 @@ const EN_TETE_LECTURE = "X-Dashboard-Token"
 
 async function verifieJetonLecture(request: Request, env: Env): Promise<Response | null> {
   const attendu = await env.AUTH.get("READ_TOKEN")
-  // Jeton absent du KV = refus. Un `if (attendu && ...)` transformerait une erreur de
-  // configuration en ouverture silencieuse : la panne doit fermer, pas ouvrir.
-  if (!attendu || request.headers.get(EN_TETE_LECTURE) !== attendu) {
+  // Jeton absent du KV = refus. `jetonsEgaux` renvoie false dès que l'une des deux valeurs
+  // manque : une erreur de configuration ferme, elle n'ouvre pas silencieusement.
+  if (!jetonsEgaux(attendu, request.headers.get(EN_TETE_LECTURE))) {
     return new Response("Non autorisé", { status: 401 })
   }
   return null
@@ -107,9 +108,11 @@ async function handleDigest(request: Request, env: Env, ctx: ExecutionContext): 
     return new Response("Non autorisé", { status: 401 })
   }
 
-  const token = authHeader.replace("Bearer ", "")
+  // `slice` et non `replace` : `replace` remplace la première occurrence OÙ QU'ELLE SOIT dans
+  // la chaîne, ce qui n'est le préfixe que par coïncidence du `startsWith` ci-dessus.
+  const token = authHeader.slice("Bearer ".length)
   const validToken = await env.AUTH.get("API_TOKEN")
-  if (token !== validToken) {
+  if (!jetonsEgaux(validToken, token)) {
     return new Response("Token invalide", { status: 403 })
   }
 

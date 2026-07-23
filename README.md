@@ -1,4 +1,4 @@
-# VeilleAnalytics
+﻿# VeilleAnalytics
 
 [![CI](https://github.com/antoinecoulon/veille-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/antoinecoulon/veille-analytics/actions/workflows/ci.yml)
 
@@ -31,7 +31,7 @@ Email récapitulatif        Cloudflare KV (auth API)     Better Auth / D1 dédi�
 | Classification ML | Hugging Face Inference API (mDeBERTa-v3 XNLI, zero-shot) |
 | IaC | Terraform (D1 + KV) |
 | CI/CD | GitHub Actions (typecheck + lint + tests + deploy Worker) |
-| Tests | Vitest + @cloudflare/vitest-pool-workers (D1 Miniflare) — 120 tests / 6 fichiers |
+| Tests | Vitest + @cloudflare/vitest-pool-workers (D1 Miniflare) — 140 tests / 7 fichiers |
 | Qualité | ESLint + SonarCloud (quality gate en CI) |
 
 L'hébergement d'un **Space Hugging Face** a été envisagé puis abandonné en juillet 2026 : CPU basic
@@ -88,7 +88,7 @@ npx wrangler deploy
 ### Tests
 
 ```bash
-pnpm test          # 120 tests / 6 fichiers (vérifié le 2026-07-22)
+pnpm test          # 140 tests / 7 fichiers (vérifié le 2026-07-23)
 ```
 
 Tests unitaires (normalisation, agrégats, comparaison ML, santé) et d'intégration (endpoints sur
