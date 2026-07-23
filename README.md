@@ -6,7 +6,7 @@ Pipeline de veille technologique automatisé avec analytics et classification ML
 
 ## Qu'est-ce que c'est ?
 
-Un outil personnel qui collecte des articles tech via des flux RSS, les classifie avec Mistral AI, les stocke dans une base cloud (Cloudflare D1) et les expose via une API. Un dashboard BI et un modèle ML de classification thématique sont prévus.
+Un outil personnel qui collecte des articles tech via des flux RSS, les classifie avec Mistral AI, les stocke dans une base cloud (Cloudflare D1) et les expose via une API. Une seconde classification par modèle ML tourne en parallèle, et un dashboard BI ([`veille-dashboard`](https://github.com/antoinecoulon/veille-dashboard)) rend les deux comparables.
 
 ## Architecture
 
@@ -28,10 +28,17 @@ Email récapitulatif        Cloudflare KV (auth API)     Better Auth / D1 dédi�
 | Authentification API (ingestion) | Cloudflare KV |
 | Dashboard | Nuxt 4 sur Cloudflare Workers |
 | Authentification dashboard | Better Auth (cœur) + D1 dédiée |
-| ML (à venir) | Hugging Face Spaces |
+| Classification ML | Hugging Face Inference API (mDeBERTa-v3 XNLI, zero-shot) |
 | IaC | Terraform (D1 + KV) |
 | CI/CD | GitHub Actions (typecheck + lint + tests + deploy Worker) |
-| Tests | Vitest + @cloudflare/vitest-pool-workers (D1 Miniflare) |
+| Tests | Vitest + @cloudflare/vitest-pool-workers (D1 Miniflare) — 120 tests / 6 fichiers |
+| Qualité | ESLint + SonarCloud (quality gate en CI) |
+
+L'hébergement d'un **Space Hugging Face** a été envisagé puis abandonné en juillet 2026 : CPU basic
+et ZeroGPU sont passés derrière un compte payant. La classification ML passe donc par l'**Inference
+API serverless**, appelée directement depuis le Worker (`src/lib/classifyMl.ts`). Un modèle
+CamemBERT affiné sur le corpus a également été évalué hors ligne ; il ne bat pas Mistral et n'est
+pas déployé.
 
 ## Installation
 
@@ -81,10 +88,11 @@ npx wrangler deploy
 ### Tests
 
 ```bash
-pnpm test
+pnpm test          # 120 tests / 6 fichiers (vérifié le 2026-07-22)
 ```
 
-Tests unitaires (normalisation) et d'intégration (endpoints sur une D1 Miniflare réelle) via
+Tests unitaires (normalisation, agrégats, comparaison ML, santé) et d'intégration (endpoints sur
+une D1 Miniflare réelle chargée avec le schéma de production) via
 `@cloudflare/vitest-pool-workers`. Lancés aussi dans le job `quality` de la CI.
 
 ### Infrastructure (Terraform)
@@ -204,40 +212,26 @@ spark-submit spark/analyse.py
 
 ## API
 
-### Ingestion
+Sept routes, deux autorisations distinctes. Le **contrat complet** — paramètres, schémas de
+réponse, codes d'erreur et comportements de bord — est dans
+[`docs/003-api.md`](docs/003-api.md).
 
-```
-POST /api/ingest
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "title": "Titre de l'article",
-  "link": "https://...",
-  "source": "nom_source",
-  "resume": "...",
-  "categorie": "PRO",
-  "score": 3,
-  "tags": ["tag1", "tag2"],
-  "themes": ["Architecture", "DevOps/Infrastructure"]
-}
-```
-
-### Lecture
-
-```
-GET /api/articles
-GET /api/stats/themes
-GET /api/stats/timeline
-GET /api/stats/sources
-```
+| Route | En-tête requis |
+|---|---|
+| `POST /api/ingest` | `Authorization: Bearer <API_TOKEN>` |
+| `GET /api/articles` | `X-Dashboard-Token: <READ_TOKEN>` |
+| `GET /api/stats/themes` | `X-Dashboard-Token` |
+| `GET /api/stats/sources` | `X-Dashboard-Token` |
+| `GET /api/stats/timeline` | `X-Dashboard-Token` |
+| `GET /api/stats/ml-comparison` | `X-Dashboard-Token` |
+| `GET /api/stats/health` | aucun — supervision, ne rend aucune donnée |
 
 ## Avancement
 
 - [x] Phase 1 — Fondations (collecte, ETL, D1, migration historique)
 - [x] Phase 2 — API lecture + Dashboard + CI/CD
 - [x] Phase 3 — ML + Analytics (classification ML, comparaison Mistral/ML, PySpark, fine-tuning)
-- [ ] Phase 4 — Finalisation + documentation M3.2
+- [ ] Phase 4 — Finalisation *(en cours : preuves, documentation, rédaction M3.2)*
 
 ## Contexte
 
@@ -245,5 +239,14 @@ Projet personnel réalisé dans le cadre du titre EADL (Expert Architecte en Dé
 
 ## Usage d'IA
 
-- **Mistral AI** : classification des articles (catégorie, score, thèmes) via l'API, modèle open-mistral-nemo.
-- **Claude (Anthropic)** : aide à la conception et à la rédaction de la documentation.
+- **Mistral AI** (`open-mistral-nemo`) : classification des articles — catégorie, score, thèmes —
+  appelée depuis Node-RED à la collecte.
+- **mDeBERTa-v3 XNLI** (Hugging Face Inference API) : seconde classification zero-shot, asynchrone,
+  déclenchée par le Worker à l'ingestion.
+- **CamemBERT affiné** sur le corpus : évalué hors ligne, non déployé — il ne bat pas Mistral.
+- **Claude (Anthropic)** : aide à la conception, à la rédaction de la documentation et des ADR,
+  et à la relecture. Toute production est relue et toute commande exécutée avant d'être retenue.
+
+Les trois classificateurs ont été évalués **contre un jeu de 100 articles annotés à la main**
+(`data/annotations.csv`), et non l'un contre l'autre : la démarche et ses résultats — y compris le
+résultat négatif du modèle affiné — sont détaillés dans le rapport M3.
